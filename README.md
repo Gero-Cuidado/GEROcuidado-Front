@@ -1,41 +1,31 @@
 # GEROcuidado Mobile App
-
-## Badges
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=bugs)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=fga-eps-mds_2023-2-GEROcuidado-Front&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=fga-eps-mds_2023-2-GEROcuidado-Front)
-
+[![React Native](https://img.shields.io/badge/React%20Native-%5E0.68-blue)](https://reactnative.dev/) 
+[![Expo](https://img.shields.io/badge/Expo-%5E48.0.0-lightgrey)](https://expo.dev/) 
+[![Node.js](https://img.shields.io/badge/Node.js-^18-green)](https://nodejs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-^9.0.0-red)](https://nestjs.com/)
 
 ## Como rodar o projeto
 
-1. Clonar o repositório:
+### 1. Clonar o repositório:
 ```bash
 git clone https://github.com/fga-eps-mds/2023-2-GEROcuidado-Front.git
 ```
 
-2. Ir para a pasta do projeto:
+### 2. Acessar o diretório do projeto:
 ```bash
 cd 2023-2-GEROcuidado-Front/
 ```
 
-3. Rodar o container:
-- em ambiente de dev:
+### 3. Construir a imagem Docker:
 ```bash
-docker compose up
+docker build -t gerocuidado-front .
 ```
 
-- em ambiente de prod:
+### 4. Iniciar o container e entrar como root:
 ```bash
-NODE_ENV=production docker compose up
+docker run -it --rm --user root gerocuidado-front /bin/bash
 ```
+
 
 ### OBSERVAÇÕES IMPORTANTES
 
@@ -65,3 +55,5 @@ docker compose -f docker-compose.test.yml up
 
 - [Expo Router: Docs](https://expo.github.io/router)
 - [Expo Router: Repo](https://github.com/expo/router)
+
+---

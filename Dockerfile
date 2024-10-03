@@ -44,4 +44,5 @@ RUN yarn install
 COPY . /opt/my-app/
 
 # Start the Expo app
-CMD ["npx", "expo", "start"]
+# CMD ["npx", "expo", "start", "--tunnel"]
+ ENTRYPOINT [ ".docker/entrypoint.sh" ]

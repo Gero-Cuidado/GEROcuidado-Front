@@ -7,6 +7,9 @@ services:
     container_name: gerocuidado-front
     ports:
       - '8081:8081'
+      - '19001:19001'
+      - '19002:19002'
+      - '19006:19006'
     volumes:
       - ./:/app
       - /app/node_modules
