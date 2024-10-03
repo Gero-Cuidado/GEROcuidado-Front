@@ -4,12 +4,23 @@ import ValorMetrica from "./ValorMetrica";
 
 export default class Metrica extends Model {
   static table = 'metrica';
+  
+  @field('idoso_id') idIdoso: string; // Remova o "!"
+  @text('categoria') categoria: string; // Remova o "!"
+  @text('valorMaximo') valorMaximo: string; // Remova o "!"
+  @readonly @date('created_at') created_at: Date; // Remova o "!"
 
-  @field('idoso_id') idIdoso!: string;
-  @text('categoria') categoria!: string;
-  @text('valorMaximo') valorMaximo!: string;
-  @readonly @date('created_at') created_at!: Date;
-  @readonly @date('updated_at') updated_at!: Date;
-
-  @children('valor_metrica') valorMetricas!: ValorMetrica;
+  // Adicione o construtor chamando o construtor da superclasse
+  constructor(
+    idIdoso: string,
+    categoria: string,
+    valorMaximo: string,
+    created_at: Date
+  ) {
+    super(); // Chama o construtor da classe base
+    this.idIdoso = idIdoso; // Inicialização
+    this.categoria = categoria; // Inicialização
+    this.valorMaximo = valorMaximo; // Inicialização
+    this.created_at = created_at; // Inicialização
+  }
 }

@@ -1,20 +1,47 @@
-FROM node:18.17.0-alpine
+FROM node:22
 
-RUN apk update && apk add curl bash make && rm -rf /var/cache/apk/*
+# Set node environment (default to production)
+ARG NODE_ENV=production
+ENV NODE_ENV $NODE_ENV
 
-WORKDIR /app
+# Default ports
+ARG PORT=19006
+ENV PORT $PORT
+EXPOSE 19006 19001 19002
 
-RUN npm i -g --unsafe-perm --allow-root -g expo-cli@6.3.10 @expo/ngrok@4.1.0
+# Install global packages
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
+ENV PATH /home/node/.npm-global/bin:$PATH
+RUN npm i --unsafe-perm -g npm@latest expo-cli@latest
 
-COPY package*.json ./
+# Install qemu-user-static for multi-arch support
+RUN apt-get update && apt-get install -y qemu-user-static
 
-RUN npm ci --legacy-peer-deps
+# Install dependencies (Python, g++, make, curl, bash)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    g++ \
+    make \
+    curl \
+    bash \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+# Add ngrok for Expo tunneling
+RUN yarn add @expo/ngrok
 
-RUN chmod +x /app/.docker/entrypoint.sh
+# Change permissions for /opt/my-app
+RUN mkdir /opt/my-app && chown root:root /opt/my-app
+WORKDIR /opt/my-app
+ENV PATH /opt/my-app/.bin:$PATH
+USER root
 
-USER node
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN yarn install
 
-EXPOSE 8081
-ENTRYPOINT ["/app/.docker/entrypoint.sh"]
+# Copy the rest of the project files
+COPY . /opt/my-app/
+
+# Start the Expo app
+CMD ["npx", "expo", "start"]
