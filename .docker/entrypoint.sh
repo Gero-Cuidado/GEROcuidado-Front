@@ -1,3 +1,2 @@
 #!/bin/bash
-
-npx expo start --tunnel
+npx expo start
