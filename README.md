@@ -31,9 +31,14 @@ docker build -t gerocuidado-front .
 docker run -it --rm -p 8081:8081 -p 19006:19006 --user root gerocuidado-front /bin/bash
 ```
 
+### 5. Acessar o App via Expo Go
+
+- **Modo Expo Go**: Abra o app **Expo Go** no seu celular, escaneie o QR Code gerado no terminal ao iniciar o Expo e execute o app diretamente no dispositivo.
+- **Development Build**: Se você estiver usando o modo **development build**, escaneie o QR Code ou insira o link gerado diretamente no Expo Go.
+
 ### Observação Importante
 
-No arquivo `Dockerfile`, você deve alterar o parâmetro `REACT_NATIVE_PACKAGER_HOSTNAME` para o IP da sua máquina local. Substitua `"192.168.0.15"` pelo seu endereço IP:
+No arquivo `Dockerfile`, altere o parâmetro `REACT_NATIVE_PACKAGER_HOSTNAME` para o IP da sua máquina local. Substitua `"192.168.0.15"` pelo seu endereço IP:
 
 ```dockerfile
 ENV REACT_NATIVE_PACKAGER_HOSTNAME="seu.endereco.ip"
@@ -55,4 +60,3 @@ docker-compose -f docker-compose.test.yml up
 
 - [Expo Router: Documentação](https://expo.github.io/router)
 - [Expo Router: Repositório](https://github.com/expo/router)
-
