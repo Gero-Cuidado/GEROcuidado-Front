@@ -1,3 +1,23 @@
+import { Model, Q, RawRecord } from '@nozbe/watermelondb';
+
+export interface IValorMetrica {
+  idMetrica: string;
+  valor: string;
+  dataHora: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IValorMetricaRaw {
+  _raw: RawRecord;
+  idMetrica: string;
+  valor: string;
+  dataHora: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+
 export enum EMetricas {
   FREQ_CARDIACA = "Frequência Cardíaca",
   TEMPERATURA = "Temperatura",
@@ -16,18 +36,19 @@ export interface IMetricaBody {
   categoria: EMetricas;
   valorMaximo?: string;
 }
+
 export interface IMetrica extends IMetricaBody {
   id: number;
 }
+
 export interface IValorMetricaBody {
   valor: string;
   dataHora: Date | string;
   idMetrica: number;
 }
 
-export interface IValorMetrica extends IValorMetricaBody {
-  id: number;
-}
+
+
 
 export interface IMetricaFilter {
   idIdoso: number;
@@ -45,3 +66,4 @@ export interface IOrder {
   column: string;
   dir: "ASC" | "DESC";
 }
+

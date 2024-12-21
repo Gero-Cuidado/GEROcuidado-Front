@@ -6,11 +6,11 @@ import Metrica from './Metrica';
 export default class Idoso extends Model {
   static table = 'idoso';
 
-  @text('nome') nome!: string;
-  @text('dataNascimento') dataNascimento!: string;
+  @field('nome') nome!: string;
+  @field('dataNascimento') dataNascimento!: string;
   @field('tipoSanguineo') tipoSanguineo!: string;
-  @text('telefoneResponsavel') telefoneResponsavel!: string;
-  @text('descricao') descricao!: string;
+  @field('telefoneResponsavel') telefoneResponsavel!: string;
+  @field('descricao') descricao!: string;
   @field('foto') foto!: string;
   @field('user_id') userId!: string;
 
@@ -19,5 +19,5 @@ export default class Idoso extends Model {
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
-  @children('metrica') metricas!: Metrica;
+  @children('metrica') metricas!: Metrica[];
 }

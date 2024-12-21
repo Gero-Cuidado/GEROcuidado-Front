@@ -76,7 +76,7 @@ export default function VisualizarMetrica() {
 
       console.log(params);
 
-      const valorMetricasCollection = database.get('valor_metrica');
+      const valorMetricasCollection = database.get<ValorMetrica>('valor_metrica');
       const valoresMetrica = await valorMetricasCollection.query(
         Q.where('metrica_id', params.id),
         Q.sortBy('created_at', Q.desc),
@@ -149,8 +149,9 @@ export default function VisualizarMetrica() {
         Q.sortBy('created_at', Q.desc),
         Q.take(1)
       ).fetch();
-      const altura = metricaAltura.at(0)?.valor;
-      const peso = metricaPeso.at(0)?.valor;
+      const altura = metricaAltura[0]?.valor;
+      const peso = metricaPeso[0]?.valor;
+      
 
       const alturaMetro = Number(altura) / 100;
       const alturaMetro2 = alturaMetro != 0.0 ? alturaMetro * alturaMetro : 1.0;

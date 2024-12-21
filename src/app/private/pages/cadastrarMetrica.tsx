@@ -20,34 +20,60 @@ import { getFoto } from "../../shared/helpers/photo.helper";
 
 export default function criarMetrica() {
   const [user, setUser] = useState<IUser | undefined>(undefined);
-  const [idoso, setIdoso] = useState<IIdoso>();
+  const [idoso, setIdoso] = useState<IIdoso | undefined>(undefined); 
   const [token, setToken] = useState<string>("");
   const [showLoading, setShowLoading] = useState(false);
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
+
+  // Função assíncrona para carregar o token do AsyncStorage
+  const getToken = async () => {
+    try {
+      const response = await AsyncStorage.getItem("token");
+      if (response) setToken(response as string);
+    } catch (error) {
+      console.error("Erro ao carregar o token:", error);
+    }
   };
 
-  const handleUser = () => {
-    AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string);
-      setUser(usuario);
-    });
+  // Função assíncrona para carregar o usuário do AsyncStorage
+  const handleUser = async () => {
+    try {
+      const response = await AsyncStorage.getItem("usuario");
+      if (response) {
+        const usuario = JSON.parse(response as string);
+        setUser(usuario);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar o usuário:", error);
+    }
   };
 
-  const getIdoso = () => {
-    AsyncStorage.getItem("idoso").then((idosoString) => {
+  // Função assíncrona para carregar o idoso do AsyncStorage
+  const getIdoso = async () => {
+    try {
+      const idosoString = await AsyncStorage.getItem("idoso");
       if (idosoString) {
         const idosoPayload = JSON.parse(idosoString) as IIdoso;
         setIdoso(idosoPayload);
       }
-    });
+    } catch (error) {
+      console.error("Erro ao carregar o idoso:", error);
+    }
   };
 
+  // Função para lidar com a seleção da métrica
   const handleMetricSelection = async (metricType: EMetricas) => {
+    // Verificando se o idoso está carregado antes de prosseguir
+    if (!idoso) {
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: "Idoso não encontrado. Por favor, tente novamente mais tarde.",
+      });
+      return; // Se o idoso não estiver disponível, retornamos e não continuamos a execução
+    }
+
     const body = {
-      idIdoso: Number(idoso?.id),
+      idIdoso: Number(idoso.id), // Garante que o idoso existe
       categoria: metricType,
     };
 
@@ -60,6 +86,7 @@ export default function criarMetrica() {
         text2: response.message as string,
       });
 
+      // Redirecionando para a tela de registros após o sucesso
       router.replace({
         pathname: "private/tabs/registros",
       });
@@ -75,12 +102,14 @@ export default function criarMetrica() {
     }
   };
 
+  // Função para retornar à tela anterior
   const back = () => {
     router.push({
       pathname: "private/tabs/registros",
     });
   };
 
+  // Função para renderizar o cartão da métrica
   const renderMetricCard = (
     metricType: EMetricas,
     iconName: string,
@@ -114,9 +143,13 @@ export default function criarMetrica() {
     </Pressable>
   );
 
-  useEffect(() => getToken(), []);
-  useEffect(() => handleUser(), []);
-  useEffect(() => getIdoso(), []);
+  // Carregamento de dados ao iniciar - Agora usando Promise.all para otimizar
+  useEffect(() => {
+    // Usando Promise.all para carregar todos os dados simultaneamente
+    Promise.all([getToken(), handleUser(), getIdoso()])
+      .catch((err) => console.error("Erro ao carregar dados iniciais:", err));
+  }, []); // Esse efeito será executado uma vez, ao montar o componente.
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

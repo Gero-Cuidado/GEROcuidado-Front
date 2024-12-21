@@ -1,13 +1,31 @@
 import { schemaMigrations } from '@nozbe/watermelondb/Schema/migrations';
 import { tableSchema } from '@nozbe/watermelondb';
 
-// Define a migração para a versão 2 do banco de dados
 export default schemaMigrations({
   migrations: [
+    // Versão 2: Criar tabela 'usuario'
+    {
+      toVersion: 2,
+      steps: [
+        {
+          type: 'create_table',
+          schema: tableSchema({
+            name: 'usuario',
+            columns: [
+              { name: 'nome', type: 'string' },
+              { name: 'foto', type: 'string', isOptional: true },
+              { name: 'email', type: 'string' },
+              { name: 'senha', type: 'string' },
+              { name: 'admin', type: 'boolean', isOptional: true },
+            ],
+          }),
+        },
+      ],
+    },
+    // Versão 3: Adicionar 'created_at' e 'updated_at' na tabela 'usuario'
     {
       toVersion: 3,
       steps: [
-        // Passo para adicionar as colunas à tabela 'usuario' se elas ainda não existirem
         {
           type: 'add_columns',
           table: 'usuario',
@@ -16,7 +34,12 @@ export default schemaMigrations({
             { name: 'updated_at', type: 'number' },
           ],
         },
-        // Passo para criar a tabela 'idoso' se ela ainda não existir
+      ],
+    },
+    // Versão 4: Criar tabelas 'idoso', 'rotina', 'metrica' e 'valor_metrica'
+    {
+      toVersion: 4,
+      steps: [
         {
           type: 'create_table',
           schema: tableSchema({
@@ -30,7 +53,7 @@ export default schemaMigrations({
               { name: 'foto', type: 'string' },
               { name: 'user_id', type: 'string', isIndexed: true },
               { name: 'created_at', type: 'number' },
-              { name: 'updated_at', type: 'number' }
+              { name: 'updated_at', type: 'number' },
             ],
           }),
         },
@@ -49,7 +72,7 @@ export default schemaMigrations({
               { name: 'dataHoraConcluidos', type: 'string' },
               { name: 'idoso_id', type: 'string', isIndexed: true },
               { name: 'created_at', type: 'number' },
-              { name: 'updated_at', type: 'number' }
+              { name: 'updated_at', type: 'number' },
             ],
           }),
         },
@@ -61,6 +84,8 @@ export default schemaMigrations({
               { name: 'idoso_id', type: 'string', isIndexed: true },
               { name: 'categoria', type: 'string' },
               { name: 'valorMaximo', type: 'string', isOptional: true },
+              { name: 'created_at', type: 'number' },
+              { name: 'updated_at', type: 'number' },
             ],
           }),
         },
@@ -72,10 +97,14 @@ export default schemaMigrations({
               { name: 'metrica_id', type: 'string', isIndexed: true },
               { name: 'valor', type: 'string' },
               { name: 'dataHora', type: 'number' },
+              { name: 'created_at', type: 'number' },
+              { name: 'updated_at', type: 'number' },
             ],
           }),
         },
       ],
     },
+    // Versão 5 a 7 (Caso haja mais alterações, você pode adicionar novas migrações)
+    // Pode adicionar outras migrações aqui se for necessário para versões acima de 4
   ],
 });

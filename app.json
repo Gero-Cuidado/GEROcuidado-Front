@@ -2,6 +2,7 @@
   "expo": {
     "name": "GEROcuidado",
     "slug": "gerocuidado",
+    "jsEngine": "jsc",
     "scheme": "gero.cuidado",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,6 +24,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "package": "com.gerocuidado.gerocuidado"
     },
     "web": {
@@ -39,7 +44,9 @@
       "router": {
         "origin": false
       },
-
+      "eas": {
+        "projectId": "55d5ddda-991d-4353-a4c9-378e8c508639"
+      }
     },
     "runtimeVersion": {
       "policy": "appVersion"

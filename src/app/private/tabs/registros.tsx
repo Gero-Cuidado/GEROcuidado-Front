@@ -23,7 +23,7 @@ export default function Registros() {
   const [idoso, setIdoso] = useState<IIdoso>();
   const [metricas, setMetricas] = useState<IMetrica[]>([]);
   const [loading, setLoading] = useState(true);
-
+  console.log("AOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
   const handleUser = () => {
     AsyncStorage.getItem("usuario").then((response) => {
       const usuario = JSON.parse(response as string);
@@ -33,12 +33,19 @@ export default function Registros() {
 
   const getIdoso = () => {
     AsyncStorage.getItem("idoso").then((idosoString) => {
-      if (idosoString) {
+      if (!idosoString) {
+        console.error("Nenhum idoso encontrado no AsyncStorage.");
+        return;
+      }
+      try {
         const idosoPayload = JSON.parse(idosoString) as IIdoso;
         setIdoso(idosoPayload);
+      } catch (error) {
+        console.error("Erro ao parsear idoso do AsyncStorage:", error);
       }
     });
   };
+  
 
   const visualizarMetrica = (item: IMetrica) => {
     router.push({
@@ -61,22 +68,37 @@ export default function Registros() {
     try {
       setLoading(true);
       const idosoMetricas = await metricasCollection.query(Q.where('idoso_id', idoso.id)).fetch();
-      
-      // Map the WatermelonDB models to your IMetrica interface
-      const metricasData: IMetrica[] = idosoMetricas.map((metrica: any) => ({
-        id: metrica._raw.id,  // Assuming `id` is a field in the _raw object
-        idIdoso: metrica._raw.idoso_id,
-        categoria: metrica._raw.categoria,
-        valorMaximo: metrica._raw.valorMaximo,
-      }));
+  
+      // Mapeamento adequado para a interface IMetrica
+      const metricasData: IMetrica[] = idosoMetricas
+        .map((metrica: any) => {
+          if (!metrica._raw) {
+            console.error("Objeto metrica retornado é inválido:", metrica);
+            return null;  // Retorna null se o objeto for inválido
+          }
+  
+          // Assegura que a propriedade valorMaximo seja opcional e retornável
+          return {
+            id: metrica._raw.id,
+            idIdoso: metrica._raw.idoso_id,
+            categoria: metrica._raw.categoria,
+            valorMaximo: metrica._raw.valorMaximo ?? undefined,  // Se não existir, valorMaximo será undefined
+          } as IMetrica; // Cast explícito para IMetrica
+        })
+        .filter((item): item is IMetrica => item !== null);  // Filtra null corretamente
   
       setMetricas(metricasData);
     } catch (err) {
-      console.log("Erro ao obter metricas do idoso:", err);
+      console.log("Erro ao obter métricas do idoso:", err);
     } finally {
       setLoading(false);
     }
   };
+  
+  
+  
+  
+  
 
   useEffect(() => handleUser(), []);
   useEffect(() => getIdoso(), []);

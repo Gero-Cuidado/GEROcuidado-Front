@@ -3,6 +3,12 @@
   "compilerOptions": {
     "jsx": "react",
     "strict": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "target": "es2017",      // ou qualquer versão superior (es2020, esnext, etc.)
+    "module": "esnext",      // ou "es2022", "node16", "nodenext"
+    "moduleResolution": "node", // Isso é importante para módulos comuns
+    "esModuleInterop": true,  // Permite importar módulos comuns de forma mais flexível
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   }
 }

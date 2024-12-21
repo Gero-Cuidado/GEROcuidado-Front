@@ -14,13 +14,14 @@ export enum ETipoSanguineo {
 export interface IIdosoBody {
   nome: string;
   dataNascimento: Date | string;
-  idUsuario: number;
+  idUsuario: string;  // Alterando para string
   foto?: string;
   tipoSanguineo?: ETipoSanguineo | null;
   telefoneResponsavel: string;
   descricao?: string;
   dataHora: Date | string;
 }
+
 
 export interface IIdoso extends IIdosoBody {
   id: string;

@@ -9,6 +9,7 @@ import {
   IMetricaValueFilter,
   IOrder,
   IValorMetrica,
+  IValorMetricaRaw
 } from "../interfaces/metricas.interface";
 import { getAllMetricaValues } from "../services/metricaValue.service";
 import Toast from "react-native-toast-message";
@@ -22,7 +23,8 @@ interface IProps {
 }
 
 export default function CardMetrica({ item }: IProps) {
-  const [valorMetrica, setValorMetrica] = useState<IValorMetrica>();
+
+  const [valorMetrica, setValorMetrica] = useState<IValorMetrica | undefined>(undefined);
   const [dataHora, setDataHora] = useState<string>();
   const [hora, setHora] = useState("");
   const [data, setData] = useState("");
@@ -116,38 +118,65 @@ export default function CardMetrica({ item }: IProps) {
     }
   };
 
-  const getMetricas = async () => {
+  const getMetricas = async (item: IMetrica) => {
     try {
-      const valorMetricasCollection = database.get('valor_metrica');
-      const valorMetrica = await valorMetricasCollection.query(
-        Q.where('metrica_id', item.id),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(1)
-      ).fetch();
-
-      setValorMetrica(valorMetrica.at(0));
+      const valorMetricasCollection = database.get<ValorMetrica>('valor_metrica');
+      const valores = await valorMetricasCollection
+        .query(
+          Q.where('metrica_id', item.id), // Filtrando pelas métricas com o ID específico
+          Q.sortBy('created_at', Q.desc), // Ordenando pela data de criação
+          Q.take(1) // Pegando o mais recente
+        )
+        .fetch();
+  
+      if (valores.length > 0) {
+        const valorMetricaRaw = valores[0]; // Agora estamos acessando diretamente a instância do modelo
+  
+        // Garantindo que a conversão seja feita corretamente
+        const valorMetrica: IValorMetrica = {
+          idMetrica: valorMetricaRaw.metrica.id, // Acesse a propriedade 'metrica_id' através da associação 'metrica'
+          valor: valorMetricaRaw.valor,
+          dataHora: new Date(valorMetricaRaw.dataHora), // A propriedade 'dataHora' já é um objeto Date
+          createdAt: new Date(valorMetricaRaw.createdAt), // A propriedade 'createdAt' já é um objeto Date
+          updatedAt: new Date(valorMetricaRaw.updatedAt), // A propriedade 'updatedAt' já é um objeto Date
+        };
+  
+        setValorMetrica(valorMetrica); // Atualizando com o objeto correto
+      } else {
+        setValorMetrica(undefined);
+      }
     } catch (err) {
-      console.log("Erro ao buscar valor de metrica:", err);
+      console.error("Erro ao buscar valor de métrica:", err);
     }
   };
+  
+  
+
+  
+  
+  
 
   const separaDataHora = () => {
-    setDataHora(valorMetrica?.dataHora as string);
-
-    if (!dataHora) return;
-
-    const dataHoraNum = new Date(dataHora).getTime();
-    const fuso = new Date(dataHora).getTimezoneOffset() * 60000;
+    if (!valorMetrica?.dataHora) return;
+  
+    const dataHoraNum = valorMetrica.dataHora.getTime();
+    const fuso = new Date().getTimezoneOffset() * 60000;
     const value = new Date(dataHoraNum - fuso).toISOString();
-    const valueFinal = value.split("T");
-    const separaHora = valueFinal[1].split(":");
-    setHora(`${separaHora[0]}:${separaHora[1]}`);
-    const separaData = valueFinal[0].split("-");
-    setData(`${separaData[2]}/${separaData[1]}/${separaData[0]}`);
+    const [datePart, timePart] = value.split("T");
+    const [year, month, day] = datePart.split("-");
+    const [hour, minute] = timePart.split(":");
+  
+    setHora(`${hour}:${minute}`);
+    setData(`${day}/${month}/${year}`);
   };
+  
 
-  useEffect(() => { getMetricas() }, []);
-  useEffect(() => separaDataHora(), [dataHora, valorMetrica]);
+  useEffect(() => {
+    if (item) {  // Verifique se 'item' está disponível
+      getMetricas(item);
+    }
+  }, [item]);  // Certifique-se de que 'item' esteja disponível quando a função for chamada
+    useEffect(() => separaDataHora(), [dataHora, valorMetrica]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

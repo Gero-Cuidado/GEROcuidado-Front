@@ -19,7 +19,7 @@ interface IErrors {
 }
 
 export default function CriaPublicacao() {
-  const [idUsuario, setIdUsuario] = useState<number | null>(null);
+  const [idUsuario, setIdUsuario] = useState<number>(0);  // Inicializa com um valor numérico
   const [token, setToken] = useState<string>("");
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -28,15 +28,41 @@ export default function CriaPublicacao() {
   const [showErrors, setShowErrors] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const getIdUsuario = () => {
-    AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string) as IUser;
-      setIdUsuario(usuario.id);
-    });
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
+  const getIdUsuario = async () => {
+    const usuarioData = await AsyncStorage.getItem("usuario");
+    if (usuarioData) {
+      const usuario = JSON.parse(usuarioData) as IUser;
+      if (usuario?.id) {
+        setIdUsuario(Number(usuario.id)); // Converta para número explicitamente
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Erro!",
+          text2: "ID de usuário não encontrado no armazenamento.",
+        });
+      }
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: "Usuário não encontrado no armazenamento.",
+      });
+    }
+  
+    const tokenData = await AsyncStorage.getItem("token");
+    if (tokenData) {
+      setToken(tokenData);
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: "Token não encontrado no armazenamento.",
+      });
+    }
   };
+  
+  
+  
 
   const data = [
     { key: ECategoriaPublicacao.GERAL, value: ECategoriaPublicacao.GERAL },
@@ -52,42 +78,59 @@ export default function CriaPublicacao() {
   ];
 
   const publicar = async () => {
-    if (Object.keys(erros).length > 0) {
-      setShowErrors(true);
-      return;
-    }
-
-    const body = {
-      idUsuario: idUsuario as number,
-      titulo,
-      descricao,
-      dataHora: new Date(),
-      categoria: categoria as ECategoriaPublicacao,
-    };
-
     try {
+      handleErrors();
+  
+      if (Object.keys(erros).length > 0) {
+        setShowErrors(true);
+        return;
+      }
+  
+      if (!idUsuario) {
+        throw new Error("ID do usuário não está definido.");
+      }
+  
+      const body = {
+        idUsuario,
+        titulo,
+        descricao,
+        dataHora: new Date(),
+        categoria: categoria as ECategoriaPublicacao,
+      };
+  
       setLoading(true);
       const response = await postPublicacao(body, token);
+  
       Toast.show({
         type: "success",
         text1: "Sucesso!",
         text2: response.message as string,
       });
       router.push("/private/tabs/forum");
-    } catch (err) {
-      const error = err as { message: string };
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : "Erro desconhecido.";
       Toast.show({
         type: "error",
-        text1: "Erro!",
-        text2: error.message,
+        text1: "Erro ao publicar!",
+        text2: errMessage,
       });
     } finally {
       setLoading(false);
     }
   };
+  
+  
+  
+  
 
   useEffect(() => handleErrors(), [titulo, descricao, categoria]);
-  useEffect(() => getIdUsuario(), []);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      await getIdUsuario();
+    };
+    fetchUserData();
+  }, []);
+  
 
   const handleErrors = () => {
     const erros: IErrors = {};

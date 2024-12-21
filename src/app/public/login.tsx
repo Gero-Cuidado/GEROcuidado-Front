@@ -17,6 +17,10 @@ import { Collection, Q } from "@nozbe/watermelondb";
 import { syncDatabaseWithServer } from "../services/watermelon.service";
 import Usuario from "../model/Usuario";
 
+
+
+
+
 interface IErrors {
   email?: string;
   senha?: string;
@@ -30,43 +34,10 @@ export default function Login() {
   const [showErrors, setShowErrors] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
 
-  const login = async () => {
-    if (Object.keys(erros).length > 0) {
-      setShowErrors(true);
-      return;
-    }
-
-    const body = { email: email.toLowerCase().trim(), senha };
-
-    try {
-      setShowLoading(true);
-      console.log("Iniciando o login...");
-
-      const response = await loginUser(body);
-      console.log("Resposta do login:", response);
-
-      const token = response.data;
-      console.log("Token recebido:", token);
-
-      await handleUser(token);
-      router.push("/private/pages/listarIdosos");
-    } catch (err) {
-      console.error("Erro durante o login:", err);
-      const error = err as { message: string };
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: error.message,
-      });
-    } finally {
-      setShowLoading(false);
-    }
-  };
-
   const handleErrors = () => {
     const erros: IErrors = {};
     let hasErrors = false;
-  
+
     // Verifica o campo de email
     if (!email) {
       erros.email = "Campo Obrigatório!";
@@ -85,7 +56,7 @@ export default function Login() {
         text2: 'Formato de email inválido!',
       });
     }
-  
+
     // Verifica o campo de senha
     if (!senha) {
       erros.senha = "Campo Obrigatório!";
@@ -96,96 +67,120 @@ export default function Login() {
         text2: 'O campo de senha é obrigatório!',
       });
     }
-  
+    
     setErros(erros);
-  
-    // Retorna se há erros para interromper a submissão
     return hasErrors;
   };
-  
+
   useEffect(() => {
     handleErrors();
   }, [email, senha]);
-  
+
+  const login = async () => {
+    if (Object.keys(erros).length > 0) {
+      setShowErrors(true);
+      return;
+    }
+
+    const body = { email: email.toLowerCase().trim(), senha };
+
+    try {
+      setShowLoading(true);
+      console.log("Iniciando o login...");
+
+      const response = await loginUser(body); // Chamando o serviço de login
+      console.log("Resposta do login:", response);
+
+      const token = response.data; // Supondo que o retorno seja um token JWT
+      console.log("Token recebido:", token);
+
+      await handleUser(token); // Processa o token recebido
+      router.push("/private/pages/listarIdosos");
+    } catch (err) {
+      console.error("Erro durante o login:", err);
+      const error = err as { message: string };
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: error.message,
+      });
+    } finally {
+      setShowLoading(false);
+    }
+  };
 
   const handleUser = async (token: string) => {
     try {
       console.log("Processando o token para obter o usuário...");
       AsyncStorage.setItem("token", token);
       const key = process.env.EXPO_PUBLIC_JWT_TOKEN_SECRET as string;
-
+  
       let userInfo: IUser | null = null;
-
+  
       try {
-        // Decodifica o token JWT
-        userInfo = JWT.decode(token, key, { timeSkew: 30 }) as unknown as IUser;
+        // Decodifica o token JWT com timeSkew aumentado para 60 segundos
+        userInfo = JWT.decode(token, key, { timeSkew: 60 }) as unknown as IUser;
         console.log("Token decodificado:", userInfo);
       } catch (decodeError) {
         console.error("Erro ao decodificar o token:", decodeError);
         // Trate o erro conforme necessário, talvez exiba uma mensagem para o usuário
       }
-
+  
       if (userInfo) {
         await getUser(userInfo.id, token);
       }
     } catch (err) {
       console.error("Erro ao processar o token:", err);
-      throw err;
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: "Erro ao processar o token.",
+      });
     }
   };
 
   const getUser = async (id: number, token: string) => {
     try {
-      // Aqui acontece a sincronização com o backend
-      await syncDatabaseWithServer();
-
+      await syncDatabaseWithServer(); // Sincroniza o banco de dados
       console.log("Buscando usuário no banco...");
+      
       const usersCollection = database.get('usuario') as Collection<Usuario>;
-
-      try {
-        const queryResult = await usersCollection.query(
-          Q.where('id', id.toString())
-        ).fetch();
-
-        console.log("Resultado da busca no banco:", queryResult);
-
-        const user = queryResult.at(0);
-
-        if (user instanceof Usuario) {
-          console.log("Settando usuario a partir do objeto do banco!");
-
-          const userTransformed = {
-            id: user.id.toString(),
-            email: user.email,
-            senha: user.senha,
-            foto: user.foto,
-            admin: user.admin,
-            nome: user.nome
-          }
-
-          console.log("userTransformed", userTransformed);
-          await AsyncStorage.setItem("usuario", JSON.stringify(
-            userTransformed
-          ));
-
-          console.log(await AsyncStorage.getItem('usuario'));
-          return;
-        }
-
-      } catch (err) {
-        console.log("Erro ao buscar usuário no banco local:", err);
+      const queryResult = await usersCollection.query(
+        Q.where('id', id.toString())
+      ).fetch();
+      
+      console.log("Resultado da busca no banco:", queryResult);
+  
+      if (queryResult.length === 0) {
+        console.error("Nenhum usuário encontrado com o id:", id);
+        return;
       }
-
-      const response = await getUserById(id, token);
-      const responseUser = response.data as IUser & {
-        foto: { data: Uint8Array };
+  
+      // Pega o primeiro item da consulta
+      const user = queryResult[0];
+  
+      // Verifica se o usuário é válido
+      if (!user) {
+        console.error("O objeto 'user' não está correto:", user);
+        return;
+      }
+  
+      // Agora podemos acessar as propriedades diretamente
+      console.log("Usuário válido encontrado:", user);
+  
+      const userTransformed = {
+        id: user.id.toString(),
+        email: user.email,
+        senha: user.senha,
+        foto: user.foto,
+        admin: user.admin,
+        nome: user.nome,
       };
-
-      // TODO: Remove this in the future
-      console.log("Usuario buscado diretamente da API...");
-      console.log(await usersCollection.query().fetch());
-
-      await AsyncStorage.setItem("usuario", JSON.stringify(responseUser));
+  
+      console.log("userTransformed:", userTransformed);
+      await AsyncStorage.setItem("usuario", JSON.stringify(userTransformed));
+      console.log("Usuário salvo no AsyncStorage:", await AsyncStorage.getItem('usuario'));
+      return;
     } catch (err) {
       console.error("Erro ao obter o usuário:", err);
       const error = err as { message: string };
@@ -196,7 +191,8 @@ export default function Login() {
       });
     }
   };
-
+  
+    
   return (
     <View>
       <BackButton color="#000" route="/" />
@@ -255,8 +251,7 @@ export default function Login() {
         </View>
       </ScrollView>
     </View>
-  );
-}
+  )};
 
 const styles = StyleSheet.create({
   voltar: {

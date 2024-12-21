@@ -51,5 +51,4 @@ export const syncDatabaseWithServer = async (): Promise<void> => {
       return { changes, timestamp }
     },
     log: logger.newLog()
-  });
-}
+  })};

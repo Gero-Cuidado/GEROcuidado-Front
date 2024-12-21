@@ -3,3 +3,6 @@ node_modules
 .vscode
 sonar-project.properties
 parser.py
+LICENSE
+README.md
+SECURITY.md
