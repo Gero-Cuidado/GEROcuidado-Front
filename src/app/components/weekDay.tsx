@@ -1,18 +1,31 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
-import { EDiasSemana } from "../interfaces/rotina.interface";
 
-interface IProps {
-  dias?: number[];
-  callbackFn: (days: number[]) => unknown;
+export enum EDiasSemana {
+  Segunda = 1,
+  Terça,
+  Quarta,
+  Quinta,
+  Sexta,
+  Sábado,
+  Domingo,
 }
 
-export default function WeekDays({ dias, callbackFn }: IProps) {
-  const [days, setDays] = useState<number[]>(dias || []);
-  const rawDays = Object.values(EDiasSemana);
+type Props = {
+  dias?: number[]; 
+  callbackFn: (days: number[]) => void; 
+};
 
-  const daysValues = rawDays.slice(rawDays.length / 2) as EDiasSemana[];
-  const daysName = rawDays.slice(0, rawDays.length / 2) as string[];
+export default function WeekDays({ dias, callbackFn }: Props) {
+  const [days, setDays] = useState<number[]>(dias || []);
+
+ 
+  const daysValues = Object.values(EDiasSemana).filter((value) =>
+    typeof value === "number"
+  ) as number[];
+  const daysName = Object.keys(EDiasSemana).filter(
+    (key) => isNaN(Number(key))
+  ) as string[];
 
   const handlePress = (dia: number) => {
     if (days.includes(dia)) {
@@ -20,8 +33,9 @@ export default function WeekDays({ dias, callbackFn }: IProps) {
       setDays(novoArray);
       callbackFn(novoArray);
     } else {
-      setDays([...days, dia]);
-      callbackFn([...days, dia]);
+      const novoArray = [...days, dia];
+      setDays(novoArray);
+      callbackFn(novoArray);
     }
   };
 
@@ -31,10 +45,10 @@ export default function WeekDays({ dias, callbackFn }: IProps) {
         <Pressable
           key={day}
           onPress={() => handlePress(day)}
-          style={[styles.circle, days?.includes(day) && styles.active]}
+          style={[styles.circle, days.includes(day) && styles.active]}
         >
           <Text
-            style={[styles.textDay, days?.includes(day) && styles.activeText]}
+            style={[styles.textDay, days.includes(day) && styles.activeText]}
           >
             {daysName[index].charAt(0)}
           </Text>
@@ -45,32 +59,27 @@ export default function WeekDays({ dias, callbackFn }: IProps) {
 }
 
 const styles = StyleSheet.create({
-  textDay: {
-    fontSize: 22,
-    color: "black",
-  },
-
   weekDays: {
     flexDirection: "row",
-    marginTop: 15,
-    marginBottom: 30,
+    justifyContent: "space-around",
+    marginVertical: 10,
   },
-
   circle: {
-    width: 35,
-    height: 35,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
-    margin: 5,
-    backgroundColor: "white",
+    backgroundColor: "#e0e0e0",
   },
   active: {
-    backgroundColor: "#2CCDB5",
-    borderColor: "#2CCDB5",
+    backgroundColor: "#6200ee",
+  },
+  textDay: {
+    fontSize: 16,
+    color: "#000",
   },
   activeText: {
-    color: "white",
+    color: "#fff",
   },
 });

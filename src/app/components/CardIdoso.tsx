@@ -1,29 +1,31 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { IIdoso } from "../interfaces/idoso.interface";
 import { router } from "expo-router";
-import { getImageUri, noImage } from "../shared/helpers/image.helper";
 import { Image } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface IProps {
-  item: IIdoso;
-}
+// Função para simular a recuperação da foto, se houver uma ou uma imagem padrão
+const getImageUri = (foto: string | undefined): string => {
+  return foto ? foto : "default-image-uri"; // Troque por uma URL de imagem padrão se necessário
+};
 
-export default function CardIdoso({ item }: IProps) {
-  const getNome = (nome: string): string => {
-    return nome.length < 15 ? nome : nome.slice(0, 15) + "...";
-  };
+// Função auxiliar para retornar o nome do idoso com truncamento
+const getNome = (nome: string): string => {
+  return nome.length < 15 ? nome : nome.slice(0, 15) + "...";
+};
 
+export default function CardIdoso({ item }: { item: { id: number, nome: string, foto: string } }) {
+  
+  // Função para salvar o idoso selecionado no AsyncStorage e navegar para outra tela
   const selectIdoso = async () => {
-    await AsyncStorage.setItem("idoso", JSON.stringify(item));
-    router.replace("private/tabs/rotinas");
+    await AsyncStorage.setItem("idoso", JSON.stringify(item)); // Salvando o idoso no AsyncStorage
+    router.replace("private/tabs/rotinas"); // Redireciona para a tela de rotinas
   };
 
+  // Função para navegar para a tela de editar idoso
   const navigate = () => {
     const params = { ...item, id: item.id, foto: getImageUri(item.foto) };
-
     router.push({
       pathname: "/private/pages/editarIdoso",
       params: params,
@@ -41,7 +43,7 @@ export default function CardIdoso({ item }: IProps) {
           <Image
             source={{ uri: item.foto }}
             style={styles.imagem}
-            placeholder={{ uri: noImage }}
+            placeholder={{ uri: "default-image-uri" }} // Imagem padrão se não houver foto
             transition={500}
           />
         </View>

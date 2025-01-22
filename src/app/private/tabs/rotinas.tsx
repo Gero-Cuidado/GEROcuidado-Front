@@ -1,50 +1,24 @@
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
 import NaoAutenticado from "../../components/NaoAutenticado";
 import IdosoNaoSelecionado from "../../components/IdosoNaoSelecionado";
 import CalendarStrip from "react-native-calendar-strip";
-
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Dimensions,
-  ActivityIndicator,
-} from "react-native";
+import { Pressable, Text, View, ActivityIndicator, StyleSheet, Dimensions } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
-import {
-  IOrder,
-  IRotina,
-  IRotinaFilter,
-} from "../../interfaces/rotina.interface";
-import CardRotina from "../../components/CardRotina";
-import { getAllRotina } from "../../services/rotina.service";
-import Toast from "react-native-toast-message";
 import { FlashList } from "@shopify/flash-list";
-import { Image } from "expo-image";
-import { IIdoso } from "../../interfaces/idoso.interface";
 import moment from "moment";
 import "moment/locale/pt-br";
-import database from "../../db";
-import { Collection, Q } from "@nozbe/watermelondb";
-import Rotina from "../../model/Rotina";
 import { getFoto } from "../../shared/helpers/photo.helper";
 
 export default function Rotinas() {
   moment.locale("pt-br");
 
-  const [idoso, setIdoso] = useState<IIdoso>();
-  const [user, setUser] = useState<IUser>();
-  const [rotinas, setRotinas] = useState<Rotina[]>([]);
+  const [idoso, setIdoso] = useState(null);
+  const [user, setUser] = useState(null);
+  const [rotinas, setRotinas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(moment());
-  const order: IOrder = {
-    column: "dataHora",
-    dir: "ASC",
-  };
 
   const datesWhitelist = [
     {
@@ -56,7 +30,7 @@ export default function Rotinas() {
   const getIdoso = () => {
     AsyncStorage.getItem("idoso").then((idosoString) => {
       if (idosoString) {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
+        const idosoPayload = JSON.parse(idosoString);
         setIdoso(idosoPayload);
       }
     });
@@ -70,7 +44,7 @@ export default function Rotinas() {
 
   const handleUser = () => {
     AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string);
+      const usuario = JSON.parse(response);
       setUser(usuario);
     });
   };
@@ -80,30 +54,20 @@ export default function Rotinas() {
 
     setLoading(true);
 
-    try {
-      const rotinaCollection = database.get('rotina') as Collection<Rotina>;
+    // Simulação de um banco de dados local com WatermelonDB, agora apenas para manipulação do estado local.
+    const allIdosoRotinas = JSON.parse(await AsyncStorage.getItem("rotinas") || "[]");
 
-      const allIdosoRotinas = await rotinaCollection.query(
-        Q.where('idoso_id', idoso.id)
-      ).fetch();
+    const filteredRotinas = allIdosoRotinas.filter((rotina) => {
+      if (rotina.dias.length > 0) {
+        const date = selectedDate.toDate();
+        const weekday = date.getDay().toString();
+        return rotina.dias.includes(weekday) && rotina.dataHora < date;
+      }
+      return true;
+    });
 
-      // TODO: tenta fazer essa filtragem direto na query meu nobre
-      const filteredRotinas = allIdosoRotinas.filter((rotina) => {
-        if (rotina.dias.length > 0) {
-          const date = selectedDate.toDate();
-          const weekday = date.getDay().toString();
-
-          return rotina.dias.includes(weekday) && rotina.dataHora < date;
-        } else {
-          return true;
-        }
-      });
-
-      setRotinas(filteredRotinas);
-
-    } finally {
-      setLoading(false);
-    }
+    setRotinas(filteredRotinas);
+    setLoading(false);
   };
 
   const markedDates = [
@@ -116,10 +80,8 @@ export default function Rotinas() {
   useEffect(() => handleUser(), []);
   useEffect(() => getIdoso(), []);
   useEffect(() => {
-      getRotinas()
-    },
-    [idoso, selectedDate]
-  );
+    getRotinas();
+  }, [idoso, selectedDate]);
 
   return (
     <>
@@ -157,7 +119,7 @@ export default function Rotinas() {
           </View>
 
           <Pressable style={styles.botaoCriarRotina} onPress={novaRotina}>
-            <Icon name="plus" color={"white"} size={20}></Icon>
+            <Icon name="plus" color={"white"} size={20} />
             <Text style={styles.textoBotaoCriarRotina}>Nova Rotina</Text>
           </Pressable>
 
@@ -175,11 +137,10 @@ export default function Rotinas() {
               <FlashList
                 data={rotinas}
                 renderItem={({ item, index }) => (
-                  <CardRotina
-                    item={item as unknown as IRotina & { categoria: string }}
-                    index={index}
-                    date={selectedDate.toDate() || new Date()}
-                  />
+                  <View key={index} style={styles.cardRotina}>
+                    <Text>{item.categoria}</Text>
+                    <Text>{moment(item.dataHora).format("HH:mm")}</Text>
+                  </View>
                 )}
                 estimatedItemSize={50}
               />
@@ -199,6 +160,7 @@ export default function Rotinas() {
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

@@ -19,10 +19,16 @@ export default function UploadImage({ setFoto, uri = null }: Readonly<Props>) {
       base64: true,
       quality: 0,
     }).then((result) => {
-      if (result.canceled) return;
+      if (result.canceled) return; // Caso o usuário cancele a seleção
 
-      setImage(result.assets[0].uri);
-      setFoto(result.assets[0].base64 as string);
+      // Verifica se a URI e o base64 existem antes de tentar usar
+      const selectedImageUri = result.assets?.[0]?.uri;
+      const selectedImageBase64 = result.assets?.[0]?.base64;
+
+      if (selectedImageUri && selectedImageBase64) {
+        setImage(selectedImageUri);  // Atualiza o estado com a URI
+        setFoto(selectedImageBase64); // Passa o base64 para o callback
+      }
     });
   };
 
@@ -34,7 +40,12 @@ export default function UploadImage({ setFoto, uri = null }: Readonly<Props>) {
         onPress={pickImage}
         testID="upload-image-botao"
       />
-      {image && <Image source={{ uri: image }} style={styles.imagem} />}
+      {/* Renderiza a imagem ou um ícone, se image for inválido */}
+      {image ? (
+        <Image source={{ uri: image }} style={styles.imagem} />
+      ) : (
+        <Icon name="image-outline" size={100} color="#AFB1B6" style={styles.icone} />
+      )}
     </View>
   );
 }

@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
+import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { router } from "expo-router";
-import { ECategoriaRotina, IRotina } from "../interfaces/rotina.interface";
-import { updateRotina } from "../services/rotina.service";
-import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import database from "../db";
-import { Collection } from "@nozbe/watermelondb";
-import Rotina from "../model/Rotina";
+import { router } from "expo-router";
 
 interface IProps {
-  item: IRotina;
+  item: {
+    id: string;
+    titulo: string;
+    categoria: string;
+    dias: string[];
+    dataHora: string;
+    descricao: string;
+    dataHoraConcluidos: string[];
+  };
   index: number;
   date: Date;
 }
@@ -23,89 +25,74 @@ export default function CardRotina({ item, index, date }: IProps) {
     day: "2-digit",
   });
 
-  const [nameIcon, setnameIcon] = useState("view-grid-outline");
+  const [nameIcon, setNameIcon] = useState("view-grid-outline");
   const [check, setCheck] = useState(false);
-  const [time, setTime] = useState<string>("");
-  const [token, setToken] = useState<string>("");
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
-
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
-  };
+  const [time, setTime] = useState("");
 
   const handleIcon = () => {
-    if (item.categoria == ECategoriaRotina.ALIMENTACAO) {
-      setnameIcon("food-apple-outline");
-    } else if (item.categoria == ECategoriaRotina.EXERCICIOS) {
-      setnameIcon("dumbbell");
-    } else if (item.categoria == ECategoriaRotina.MEDICAMENTO) {
-      setnameIcon("medical-bag");
+    switch (item.categoria) {
+      case "ALIMENTACAO":
+        setNameIcon("food-apple-outline");
+        break;
+      case "EXERCICIOS":
+        setNameIcon("dumbbell");
+        break;
+      case "MEDICAMENTO":
+        setNameIcon("medical-bag");
+        break;
+      default:
+        setNameIcon("view-grid-outline");
     }
   };
 
-  const debounceConcluido = (concluido: boolean) => {
+  const debounceConcluido = async (concluido: boolean) => {
     setCheck(concluido);
-    if (timer) clearTimeout(timer);
-    const temp = setTimeout(() => updateRotinaConcluido(concluido), 1000);
-    setTimer(temp);
-  };
-
-  const updateRotinaConcluido = async (concluido: boolean) => {
-    let dataHoraConcluidos = [];
+    let updatedDataHoraConcluidos = [];
 
     if (concluido) {
-      dataHoraConcluidos = [...item.dataHoraConcluidos, dateString];
+      updatedDataHoraConcluidos = [...item.dataHoraConcluidos, dateString];
     } else {
-      dataHoraConcluidos = item.dataHoraConcluidos.filter((item) => {
-        return item !== dateString;
-      });
+      updatedDataHoraConcluidos = item.dataHoraConcluidos.filter(
+        (data) => data !== dateString
+      );
     }
 
     try {
-      // await updateRotina(item.id, { dataHoraConcluidos }, token);
-      const rotinaCollection = database.get('rotina') as Collection<Rotina>;
-
-      await database.write(async () => {
-        const rotina = await rotinaCollection.find(item.id);
-        await rotina.update(() => {
-          rotina.dataHoraConcluidos = dataHoraConcluidos;
-        })
-      })
-
-    } catch (err) {
-      const error = err as { message: string };
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: error.message,
-      });
+      const storedData = await AsyncStorage.getItem("rotinas");
+      const rotinas = storedData ? JSON.parse(storedData) : [];
+      const updatedRotinas = rotinas.map((rotina: any) =>
+        rotina.id === item.id
+          ? { ...rotina, dataHoraConcluidos: updatedDataHoraConcluidos }
+          : rotina
+      );
+      await AsyncStorage.setItem("rotinas", JSON.stringify(updatedRotinas));
+    } catch (error) {
+      console.error("Erro ao salvar rotina:", error);
     }
   };
 
-  const editar = () => {
-    const rotina = item as unknown as Rotina;
-    const rotinaAttributes = {
-      id: rotina.id,
-      titulo: rotina.titulo,
-      categoria: rotina.categoria,
-      dias: rotina.dias,
-      dataHora: rotina.dataHora,
-      descricao: rotina.descricao,
-      token: rotina.token,
-      notificacao: rotina.notificacao,
-      dataHoraConcluidos: rotina.dataHoraConcluidos,
-      idosoId: rotina.idIdoso,
-      createdAt: rotina.createdAt,
-      updatedAt: rotina.updatedAt,
-    }
-    const params = { rotina: JSON.stringify(rotinaAttributes) };
+  const navigate = async () => {
+    try {
+      const formattedParams = {
+        id: item.id,
+        titulo: item.titulo,
+        descricao: item.descricao,
+        categoria: item.categoria,
+        dataHora: new Date(item.dataHora).toLocaleString(),
+        dataHoraConcluidos: JSON.stringify(item.dataHoraConcluidos),
+      };
 
-    router.push({
-      pathname: "/private/pages/editarRotina",
-      params: params,
-    });
+      // Salva os dados no AsyncStorage
+      await AsyncStorage.setItem(item.id, JSON.stringify(item));
+
+      // Navega para a página de edição da rotina
+      router.push({
+        pathname: "/private/pages/editarRotina",
+        params: formattedParams,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar rotina ou navegar:", error);
+    }
   };
 
   const handleDataHora = () => {
@@ -123,17 +110,16 @@ export default function CardRotina({ item, index, date }: IProps) {
   };
 
   useEffect(() => handleIcon(), []);
-  useEffect(() => getToken(), []);
   useEffect(() => handleDataHora(), []);
 
   return (
     <>
       <Text style={styles.hora}>{time}</Text>
       <Pressable
-        onPress={editar}
+        onPress={navigate}
         style={[
           styles.container,
-          { backgroundColor: index % 2 == 0 ? "#B4FFE8" : "#FFC6C6" },
+          { backgroundColor: index % 2 === 0 ? "#B4FFE8" : "#FFC6C6" },
         ]}
       >
         <View style={styles.icon}>

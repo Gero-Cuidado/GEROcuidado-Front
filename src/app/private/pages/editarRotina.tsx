@@ -13,23 +13,18 @@ import { ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { router, useLocalSearchParams } from "expo-router";
 import { SelectList } from "react-native-dropdown-select-list";
-import { ECategoriaRotina, IRotina } from "../../interfaces/rotina.interface";
 import WeekDays from "../../components/weekDay";
 import Calendar from "react-native-vector-icons/Feather";
 import CustomButton from "../../components/CustomButton";
 import MaskInput, { Masks } from "react-native-mask-input";
 import MaskHour from "../../components/MaskHour";
-import { deleteRotina, updateRotina } from "../../services/rotina.service";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorMessage from "../../components/ErrorMessage";
 import ModalConfirmation from "../../components/ModalConfirmation";
-import { IIdoso } from "../../interfaces/idoso.interface";
 import * as Notifications from "expo-notifications";
-import Rotina from "../../model/Rotina";
-import database from "../../db";
-import { Collection } from "@nozbe/watermelondb";
 import { handleNotificacao, validateFields } from "../../shared/helpers/useNotification";
+
 interface IErrors {
   titulo?: string;
   data?: string;
@@ -41,38 +36,26 @@ interface IErrors {
 export default function EditarRotina() {
   const { rotina } = useLocalSearchParams();
   const params = JSON.parse(rotina as string);
-  const [idoso, setIdoso] = useState<IIdoso>();
   const [titulo, setTitulo] = useState(params.titulo);
   const [descricao, setDescricao] = useState(params.descricao);
   const [categoria, setCategoria] = useState(params.categoria);
-  const [dias, setDias] = useState(
-    params.dias.map(Number)
-  );
+  const [dias, setDias] = useState(params.dias.map(Number));
   const [showLoading, setShowLoading] = useState(false);
   const [erros, setErros] = useState<IErrors>({});
   const [showErrors, setShowErrors] = useState(false);
-  const [token, setToken] = useState<string>("");
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
   const [showLoadingApagar, setShowLoadingApagar] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [notificacao, setNotificacao] = useState(
-    String(params.notificacao) === "true",
-  );
+  const [notificacao, setNotificacao] = useState(String(params.notificacao) === "true");
   const [expoToken, setExpoToken] = useState(params.token);
 
   const getIdoso = () => {
     AsyncStorage.getItem("idoso").then((idosoString) => {
       if (idosoString) {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
-        setIdoso(idosoPayload);
+        const idosoPayload = JSON.parse(idosoString);
+        // Remove the backend logic and use local data here
       }
-    });
-  };
-
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
     });
   };
 
@@ -95,10 +78,10 @@ export default function EditarRotina() {
   };
 
   const categorias = [
-    { key: ECategoriaRotina.GERAL, value: ECategoriaRotina.GERAL },
-    { key: ECategoriaRotina.MEDICAMENTO, value: ECategoriaRotina.MEDICAMENTO },
-    { key: ECategoriaRotina.ALIMENTACAO, value: ECategoriaRotina.ALIMENTACAO },
-    { key: ECategoriaRotina.EXERCICIOS, value: ECategoriaRotina.EXERCICIOS },
+    { key: "GERAL", value: "GERAL" },
+    { key: "MEDICAMENTO", value: "MEDICAMENTO" },
+    { key: "ALIMENTACAO", value: "ALIMENTACAO" },
+    { key: "EXERCICIOS", value: "EXERCICIOS" },
   ];
 
   const getDateIsoString = (data: string, hora: string) => {
@@ -115,19 +98,19 @@ export default function EditarRotina() {
     try {
       setShowLoading(true);
 
-      const rotinaCollection = database.get('rotina') as Collection<Rotina>;
-      await database.write(async () => {
-        const rotina = await rotinaCollection.find(params.id);
-        await rotina.update(() => {
-          rotina.titulo = titulo;
-          rotina.categoria = categoria;
-          rotina.dias = dias;
-          rotina.dataHora = new Date(getDateIsoString(data, hora));
-          rotina.descricao = descricao;
-          rotina.token = token;
-          rotina.notificacao = notificacao
-        });
-      });
+      // Use AsyncStorage or local database instead of backend services
+      const rotinaLocal = { 
+        id: params.id,
+        titulo,
+        categoria,
+        dias,
+        dataHora: new Date(getDateIsoString(data, hora)),
+        descricao,
+        notificacao
+      };
+
+      // Save locally
+      await AsyncStorage.setItem('rotina', JSON.stringify(rotinaLocal));
 
       Toast.show({
         type: "success",
@@ -135,7 +118,7 @@ export default function EditarRotina() {
         text2: "Rotina atualizada com sucesso",
       });
 
-    } catch(err) {
+    } catch (err) {
       console.log("Erro ao atualizar rotina:", err);
     } finally {
       setShowLoading(false);
@@ -147,17 +130,9 @@ export default function EditarRotina() {
     setShowLoadingApagar(true);
 
     try {
-      const rotinaCollection = database.get('rotina') as Collection<Rotina>;
-      await database.write(async () => {
-        const rotina = await rotinaCollection.find(params.id);
-
-        // TODO: mudar para `markAsDeleted` quando houver sincronização
-        await rotina.destroyPermanently();
-      });
-
+      await AsyncStorage.removeItem('rotina');
       router.replace({
         pathname: "private/tabs/rotinas",
-        params: idoso,
       });
     } catch (err) {
       console.log("Erro ao apagar rotina:", err);
@@ -167,12 +142,11 @@ export default function EditarRotina() {
   };
 
   useEffect(() => getIdoso(), []);
-  useEffect(() => getToken(), []);
   useEffect(() => handleErrors(), [titulo, data, hora, categoria, descricao]);
   useEffect(() => handleDataHora(), []);
   useEffect(() => {
     handleNotificacao(notificacao, setNotificacao, setExpoToken);
-  }, [notificacao])
+  }, [notificacao]);
 
   const confirmation = () => {
     setModalVisible(!modalVisible);
@@ -241,19 +215,18 @@ export default function EditarRotina() {
         <View>
           <View style={styles.categoria}>
             {!categoria ||
-              (categoria === ECategoriaRotina.GERAL && (
+              (categoria === "GERAL" && (
                 <Icon style={styles.iconCategoria} name="view-grid-outline" />
               ))}
-            {categoria === ECategoriaRotina.ALIMENTACAO && (
+            {categoria === "ALIMENTACAO" && (
               <Icon style={styles.iconCategoria} name="food-apple-outline" />
             )}
-            {categoria === ECategoriaRotina.MEDICAMENTO && (
+            {categoria === "MEDICAMENTO" && (
               <Icon style={styles.iconCategoria} name="medical-bag" />
             )}
-            {categoria === ECategoriaRotina.EXERCICIOS && (
+            {categoria === "EXERCICIOS" && (
               <Icon style={styles.iconCategoria} name="dumbbell" />
             )}
-            {/* <Icon style={styles.iconCategoria} name="view-grid-outline" /> */}
             <SelectList
               boxStyles={styles.dropdown}
               inputStyles={styles.categoriaSelecionada}
@@ -328,6 +301,7 @@ export default function EditarRotina() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

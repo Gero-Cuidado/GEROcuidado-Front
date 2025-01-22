@@ -3,180 +3,96 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import {
-  EMetricas,
-  IMetrica,
-  IMetricaValueFilter,
-  IOrder,
-  IValorMetrica,
-  IValorMetricaRaw
-} from "../interfaces/metricas.interface";
-import { getAllMetricaValues } from "../services/metricaValue.service";
-import Toast from "react-native-toast-message";
 import { Entypo } from "@expo/vector-icons";
-import database from "../db";
-import { Q } from "@nozbe/watermelondb";
-import ValorMetrica from "../model/ValorMetrica";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface IProps {
-  item: IMetrica;
+  item: {
+    id: string;
+    categoria: string;
+  };
 }
 
 export default function CardMetrica({ item }: IProps) {
-
-  const [valorMetrica, setValorMetrica] = useState<IValorMetrica | undefined>(undefined);
-  const [dataHora, setDataHora] = useState<string>();
+  const [valorMetrica, setValorMetrica] = useState<number | undefined>(undefined);
+  const [dataHora, setDataHora] = useState<string | undefined>(undefined);
   const [hora, setHora] = useState("");
   const [data, setData] = useState("");
-
-  const order: IOrder = {
-    column: "dataHora",
-    dir: "DESC",
-  };
 
   const titleColor = "#000";
   const textColor = "#888";
 
   const unidade = () => {
-    if (item.categoria == EMetricas.FREQ_CARDIACA) {
-      return "bpm";
-    }
-    if (item.categoria == EMetricas.GLICEMIA) {
-      return "mg/dL";
-    }
-    if (item.categoria == EMetricas.PESO) {
-      return "kg";
-    }
-    if (item.categoria == EMetricas.PRESSAO_SANGUINEA) {
-      return "mmHg";
-    }
-    if (item.categoria == EMetricas.SATURACAO_OXIGENIO) {
-      return "%";
-    }
-    if (item.categoria == EMetricas.TEMPERATURA) {
-      return "°C";
-    }
-    if (item.categoria == EMetricas.HORAS_DORMIDAS) {
-      return "h";
-    }
-    if (item.categoria == EMetricas.ALTURA) {
-      return "cm";
-    }
-    if (item.categoria == EMetricas.IMC) {
-      return "kg/m²";
-    }
-    if (item.categoria == EMetricas.HIDRATACAO) {
-      return "ml";
-    }
+    const unidades: Record<string, string> = {
+      "FREQ_CARDIACA": "bpm",
+      "GLICEMIA": "mg/dL",
+      "PESO": "kg",
+      "PRESSAO_SANGUINEA": "mmHg",
+      "SATURACAO_OXIGENIO": "%",
+      "TEMPERATURA": "°C",
+      "HORAS_DORMIDAS": "h",
+      "ALTURA": "cm",
+      "IMC": "kg/m²",
+      "HIDRATACAO": "ml",
+    };
+    return unidades[item.categoria] || "";
   };
 
   const icone = () => {
-    if (item.categoria == EMetricas.FREQ_CARDIACA) {
-      return <FontAwesome name="heartbeat" color={"#FF7D7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.GLICEMIA) {
-      return <FontAwesome name="cubes" color={"#3F3F3F"} size={25} />;
-    }
-    if (item.categoria == EMetricas.PESO) {
-      return <Icon name="scale-bathroom" color={"#B4026D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.PRESSAO_SANGUINEA) {
-      return <FontAwesome name="tint" color={"#FF7D7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.SATURACAO_OXIGENIO) {
-      return (
+    const icones: Record<string, JSX.Element> = {
+      "FREQ_CARDIACA": <FontAwesome name="heartbeat" color={"#FF7D7D"} size={25} />,
+      "GLICEMIA": <FontAwesome name="cubes" color={"#3F3F3F"} size={25} />,
+      "PESO": <Icon name="scale-bathroom" color={"#B4026D"} size={25} />,
+      "PRESSAO_SANGUINEA": <FontAwesome name="tint" color={"#FF7D7D"} size={25} />,
+      "SATURACAO_OXIGENIO": (
         <View>
           <Text>
             O<Text style={{ fontSize: 10 }}>2</Text>
           </Text>
         </View>
-      );
-    }
-    if (item.categoria == EMetricas.TEMPERATURA) {
-      return <FontAwesome name="thermometer" color={"#FFAC7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.HORAS_DORMIDAS) {
-      return <FontAwesome name="bed" color={"#4B0082"} size={25} />;
-    }
-    if (item.categoria == EMetricas.ALTURA) {
-      return (
-        <Entypo
-          name="ruler"
-          color={"#000"}
-          size={25}
-          style={{ opacity: 0.8 }}
-        />
-      );
-    }
-    if (item.categoria == EMetricas.IMC) {
-      return <Entypo name="calculator" color={"#000"} size={25} />;
-    }
-    if (item.categoria == EMetricas.HIDRATACAO) {
-      return (
-        <MaterialCommunityIcons name="cup-water" color={"#1075c8"} size={25} />
-      );
-    }
+      ),
+      "TEMPERATURA": <FontAwesome name="thermometer" color={"#FFAC7D"} size={25} />,
+      "HORAS_DORMIDAS": <FontAwesome name="bed" color={"#4B0082"} size={25} />,
+      "ALTURA": <Entypo name="ruler" color={"#000"} size={25} style={{ opacity: 0.8 }} />,
+      "IMC": <Entypo name="calculator" color={"#000"} size={25} />,
+      "HIDRATACAO": <MaterialCommunityIcons name="cup-water" color={"#1075c8"} size={25} />,
+    };
+    return icones[item.categoria] || null;
   };
 
-  const getMetricas = async (item: IMetrica) => {
+  const getMetricas = async () => {
     try {
-      const valorMetricasCollection = database.get<ValorMetrica>('valor_metrica');
-      const valores = await valorMetricasCollection
-        .query(
-          Q.where('metrica_id', item.id), // Filtrando pelas métricas com o ID específico
-          Q.sortBy('created_at', Q.desc), // Ordenando pela data de criação
-          Q.take(1) // Pegando o mais recente
-        )
-        .fetch();
-  
-      if (valores.length > 0) {
-        const valorMetricaRaw = valores[0]; // Agora estamos acessando diretamente a instância do modelo
-  
-        // Garantindo que a conversão seja feita corretamente
-        const valorMetrica: IValorMetrica = {
-          idMetrica: valorMetricaRaw.metrica.id, // Acesse a propriedade 'metrica_id' através da associação 'metrica'
-          valor: valorMetricaRaw.valor,
-          dataHora: new Date(valorMetricaRaw.dataHora), // A propriedade 'dataHora' já é um objeto Date
-          createdAt: new Date(valorMetricaRaw.createdAt), // A propriedade 'createdAt' já é um objeto Date
-          updatedAt: new Date(valorMetricaRaw.updatedAt), // A propriedade 'updatedAt' já é um objeto Date
-        };
-  
-        setValorMetrica(valorMetrica); // Atualizando com o objeto correto
+      const storedValue = await AsyncStorage.getItem(`metrica_${item.id}`);
+      if (storedValue) {
+        const { valor, dataHora } = JSON.parse(storedValue);
+        setValorMetrica(valor);
+        setDataHora(dataHora);
       } else {
         setValorMetrica(undefined);
+        setDataHora(undefined);
       }
     } catch (err) {
       console.error("Erro ao buscar valor de métrica:", err);
     }
   };
-  
-  
-
-  
-  
-  
 
   const separaDataHora = () => {
-    if (!valorMetrica?.dataHora) return;
-  
-    const dataHoraNum = valorMetrica.dataHora.getTime();
-    const fuso = new Date().getTimezoneOffset() * 60000;
-    const value = new Date(dataHoraNum - fuso).toISOString();
-    const [datePart, timePart] = value.split("T");
-    const [year, month, day] = datePart.split("-");
-    const [hour, minute] = timePart.split(":");
-  
+    if (!dataHora) return;
+
+    const date = new Date(dataHora);
+    const [year, month, day] = date.toISOString().split("T")[0].split("-");
+    const [hour, minute] = date.toISOString().split("T")[1].split(":");
     setHora(`${hour}:${minute}`);
     setData(`${day}/${month}/${year}`);
   };
-  
 
   useEffect(() => {
-    if (item) {  // Verifique se 'item' está disponível
-      getMetricas(item);
-    }
-  }, [item]);  // Certifique-se de que 'item' esteja disponível quando a função for chamada
-    useEffect(() => separaDataHora(), [dataHora, valorMetrica]);
+    getMetricas();
+  }, [item]);
+
+  useEffect(() => {
+    separaDataHora();
+  }, [dataHora]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -185,7 +101,7 @@ export default function CardMetrica({ item }: IProps) {
       >
         <View
           style={
-            item.categoria == EMetricas.SATURACAO_OXIGENIO
+            item.categoria === "SATURACAO_OXIGENIO"
               ? styles.oxygenIcon
               : styles.othersIcons
           }
@@ -196,15 +112,14 @@ export default function CardMetrica({ item }: IProps) {
           </Text>
         </View>
         <Text style={styles.content}>
-          {valorMetrica && (
+          {valorMetrica !== undefined ? (
             <>
-              <Text style={[styles.number]}>{valorMetrica.valor}</Text>
+              <Text style={[styles.number]}>{valorMetrica}</Text>
               <Text style={[styles.units, { color: textColor }]}>
                 {unidade()}
               </Text>
             </>
-          )}
-          {!valorMetrica && (
+          ) : (
             <Text style={[styles.units, { color: textColor }]}>
               Nenhum valor cadastrado
             </Text>
@@ -219,6 +134,7 @@ export default function CardMetrica({ item }: IProps) {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

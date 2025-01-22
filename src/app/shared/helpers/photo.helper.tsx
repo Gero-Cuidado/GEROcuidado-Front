@@ -4,23 +4,21 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { hasFoto } from "./foto.helper";
 import { StyleSheet } from 'react-native';
 
-export const getFoto = (
-    foto: string | null | undefined
-  ) => {
-    // Verifique se a função hasFoto está definida
-    if (hasFoto(foto)) {
-      return (
-        <Image source={{ uri: foto as string }} style={styles.fotoPerfil} testID="foto-resultado" />
-      );
-    }
-  
+export const getFoto = (foto: string | null | undefined) => {
+  console.log(foto); // Verifique o valor de `foto`
+  if (hasFoto(foto)) {
     return (
-      <View style={[styles.semFoto, styles.fotoPerfil]}>
-        <Icon style={styles.semFotoIcon} name="image-outline" size={15} />
-      </View>
+      <Image source={{ uri: foto as string }} style={styles.fotoPerfil} testID="foto-resultado" />
     );
-  };
-  
+  }
+
+  return (
+    <View style={[styles.semFoto, styles.fotoPerfil]}>
+      <Icon style={styles.semFotoIcon} name="image-outline" size={15} />
+    </View>
+  );
+};
+
   const styles = StyleSheet.create({
     fotoPerfil: {
       width: 60,

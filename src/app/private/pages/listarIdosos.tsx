@@ -1,197 +1,148 @@
 import React, { useEffect, useState } from "react";
 import {
- View,
- Text,
- StyleSheet,
- Pressable,
- ActivityIndicator,
+  View,
+  Text,
+  Pressable,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet
 } from "react-native";
-import { FlatList } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import BackButton from "../../components/BackButton";
 import CardIdoso from "../../components/CardIdoso";
 import { useRouter } from "expo-router";
-import { IIdoso, IOrder } from "../../interfaces/idoso.interface";
-import Toast from "react-native-toast-message";
 import { SelectList } from "react-native-dropdown-select-list";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
-import database from "../../db";
-import Idoso from "../../model/Idoso";
-import { Collection, Q } from "@nozbe/watermelondb";
 import { getImageUri } from "../../shared/helpers/image.helper";
+import Toast from "react-native-toast-message";
 
-
-interface IOrderOption {
- key: IOrder;
- value: string;
-}
-
-
-const data: IOrderOption[] = [
- {
-   key: {
-     column: "nome",
-     dir: "ASC",
-   },
-   value: "A-Z",
- },
- {
-   key: {
-     column: "nome",
-     dir: "DESC",
-   },
-   value: "Z-A",
- },
- {
-   key: {
-     column: "dataNascimento",
-     dir: "DESC",
-   },
-   value: "Mais atual",
- },
- {
-   key: {
-     column: "dataNascimento",
-     dir: "ASC",
-   },
-   value: "Mais antigo",
- },
+const data = [
+  {
+    key: { column: "nome", dir: "ASC" },
+    value: "A-Z",
+  },
+  {
+    key: { column: "nome", dir: "DESC" },
+    value: "Z-A",
+  },
+  {
+    key: { column: "dataNascimento", dir: "DESC" },
+    value: "Mais atual",
+  },
+  {
+    key: { column: "dataNascimento", dir: "ASC" },
+    value: "Mais antigo",
+  },
 ];
 
-
 export default function ListarIdosos() {
- const [idosos, setIdosos] = useState<IIdoso[]>([]);
- const [loading, setLoading] = useState(true);
- const [orderOption, setOrderOption] = useState<IOrder>(data[0].key);
- const [idUsuario, setIdUsuario] = useState<number | null>(null);
+  const [idosos, setIdosos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [orderOption, setOrderOption] = useState(data[0].key);
+  const [idUsuario, setIdUsuario] = useState<number | null>(null);
 
+  const router = useRouter();
 
- const router = useRouter();
+  useEffect(() => {
+    const getIdUsuario = async () => {
+      try {
+        const response = await AsyncStorage.getItem("usuario");
+        if (response) {
+          const usuario = JSON.parse(response);
+          setIdUsuario(usuario.id);
+          console.log("Usuário logado:", usuario);
+        }
+      } catch (error) {
+        console.error("Erro ao obter usuário:", error);
+      }
+    };
+    getIdUsuario();
+  }, []);
 
+  const getIdosos = async () => {
+    if (!idUsuario) return;
+    setLoading(true);
 
- useEffect(() => {
-   const getIdUsuario = async () => {
-     try {
-       const response = await AsyncStorage.getItem("usuario");
-       if (response) {
-         const usuario = JSON.parse(response) as IUser;
-         setIdUsuario(usuario.id);
-         console.log("Usuário logado:", usuario);
-       }
-     } catch (error) {
-       console.error("Erro ao obter usuário:", error);
-     }
-   };
+    try {
+      const idososData = await AsyncStorage.getItem("idosos");
+      if (idososData) {
+        const idososArray = JSON.parse(idososData);
+        const sortedIdosos = idososArray.sort((a, b) => {
+          if (orderOption.dir === "ASC") {
+            return a[orderOption.column] > b[orderOption.column] ? 1 : -1;
+          }
+          return a[orderOption.column] < b[orderOption.column] ? 1 : -1;
+        });
+        setIdosos(sortedIdosos);
+      }
+    } catch (err) {
+      const error = err as { message: string };
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const navigateCadastrar = () => {
+    router.push("/private/pages/cadastrarIdoso");
+  };
 
-   getIdUsuario();
- }, []);
+  useEffect(() => {
+    if (idUsuario) {
+      getIdosos();
+    }
+  }, [orderOption, idUsuario]);
 
+  return (
+    <View style={styles.screen}>
+      <View style={styles.backButton}>
+        <BackButton route="/private/tabs/perfil" color="#000" />
+      </View>
 
- const getIdosos = async () => {
-   if (!idUsuario) return;
+      <Text style={styles.header}>De quem está cuidando agora?</Text>
 
+      <View style={styles.list}>
+        <SelectList
+          data={data}
+          setSelected={(item) => {
+            setOrderOption(item);
+          }}
+          search={false}
+          boxStyles={styles.boxDropDown}
+          inputStyles={styles.boxInputDropDown}
+          dropdownStyles={styles.dropDown}
+          placeholder="selecione"
+        />
+      </View>
 
-   setLoading(true);
+      {loading && (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#2CCDB5" />
+        </View>
+      )}
 
-
-   try {
-     const idosoCollection = database.get('idoso') as Collection<Idoso>;
-
-
-     const query = Q.sortBy(
-       orderOption.column,
-       orderOption.dir.toLowerCase() as 'asc' | 'desc'
-     );
-
-
-     const idosoRecords = await idosoCollection.query(query).fetch();
-
-
-     const mappedIdoso = idosoRecords.map((item) => ({
-       ...item._raw,
-       foto: getImageUri(item.foto),
-     }));
-
-
-     setIdosos(mappedIdoso);
-     console.log("Idosos carregados:", mappedIdoso);
-   } catch (err) {
-     const error = err as { message: string };
-     Toast.show({
-       type: "error",
-       text1: "Erro!",
-       text2: error.message,
-     });
-   } finally {
-     setLoading(false);
-   }
- };
-
-
- const navigateCadastrar = () => {
-   router.push("/private/pages/cadastrarIdoso");
- };
-
-
- useEffect(() => {
-   if (idUsuario) {
-     getIdosos();
-   }
- }, [orderOption, idUsuario]);
-
-
- return (
-   <View style={styles.screen}>
-     <View style={styles.backButton}>
-       <BackButton route="/private/tabs/perfil" color="#000" />
-     </View>
-
-
-     <Text style={styles.header}>De quem está cuidando agora?</Text>
-
-
-     <View style={styles.list}>
-       <SelectList
-         data={data}
-         setSelected={(item: IOrder) => {
-           setOrderOption(item);
-         }}
-         search={false}
-         boxStyles={styles.boxDropDown}
-         inputStyles={styles.boxInputDropDown}
-         dropdownStyles={styles.dropDown}
-         placeholder="selecione"
-       />
-     </View>
-
-
-     {loading && (
-       <View style={styles.loading}>
-         <ActivityIndicator size="large" color="#2CCDB5" />
-       </View>
-     )}
-
-
-     {!loading && (
-       <View style={styles.cardIdoso}>
-         <FlatList
-           showsVerticalScrollIndicator={false}
-           numColumns={2}
-           data={idosos}
-           renderItem={({ item }) => <CardIdoso item={item} />}
-         />
-       </View>
-     )}
-     <View style={styles.cadastroContainer}>
-       <Pressable style={styles.cadastroBtn} onPress={navigateCadastrar}>
-         <AntDesign name="pluscircleo" size={54} />
-         <Text style={styles.cadastroText}>Cadastrar um idoso</Text>
-       </Pressable>
-     </View>
-   </View>
- );
+      {!loading && (
+        <View style={styles.cardIdoso}>
+          <FlatList
+            showsVerticalScrollIndicator={false}
+            numColumns={2}
+            data={idosos}
+            renderItem={({ item }) => <CardIdoso item={item} />}
+          />
+        </View>
+      )}
+      <View style={styles.cadastroContainer}>
+        <Pressable style={styles.cadastroBtn} onPress={navigateCadastrar}>
+          <AntDesign name="pluscircleo" size={54} />
+          <Text style={styles.cadastroText}>Cadastrar um idoso</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 }
 
 

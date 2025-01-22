@@ -1,10 +1,22 @@
-import React from "react";
-import { View, Image, Text, StyleSheet, Pressable } from "react-native";
-import { IPublicacao } from "../interfaces/forum.interface";
+import React, { useEffect, useState } from "react";
+import { View, Image, Text, Pressable, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { router } from "expo-router";
 import AntDesing from "react-native-vector-icons/AntDesign";
-import { hasFoto } from "../shared/helpers/foto.helper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+
+interface IPublicacao {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: string;
+  dataHora: string | Date;
+  usuario?: {
+    nome?: string;
+    foto?: string | null;
+  };
+  idUsuarioReporte?: string[];
+}
 
 interface IProps {
   item: IPublicacao;
@@ -12,9 +24,25 @@ interface IProps {
 }
 
 export default function Publicacao({ item, crop }: Readonly<IProps>) {
+  const router = useRouter();
+  const [publicacao, setPublicacao] = useState<IPublicacao | null>(null);
+
+  useEffect(() => {
+    const fetchPublicacao = async () => {
+      try {
+        const data = await AsyncStorage.getItem(item.id);
+        if (data) {
+          setPublicacao(JSON.parse(data));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar publicação no AsyncStorage:", error);
+      }
+    };
+    fetchPublicacao();
+  }, [item.id]);
 
   const getFoto = (foto: string | null | undefined) => {
-    if (hasFoto(foto)) {
+    if (foto) {
       return (
         <Image source={{ uri: foto as string }} style={styles.fotoPerfil} />
       );
@@ -37,14 +65,32 @@ export default function Publicacao({ item, crop }: Readonly<IProps>) {
     return date.toLocaleDateString("pt-BR");
   };
 
-  const navigate = () => {
-    const params = { ...item, ...item.usuario, id: item.id };
-
-    router.push({
-      pathname: "/private/pages/visualizarPublicacao",
-      params: params,
-    });
+  const navigate = async () => {
+    try {
+      // Converte o dataHora para string e o objeto usuario para JSON
+      const formattedParams = {
+        id: item.id,
+        titulo: item.titulo,
+        descricao: item.descricao,
+        categoria: item.categoria,
+        dataHora: new Date(item.dataHora).toLocaleString(),
+        usuario: JSON.stringify(item.usuario),  // Convertendo o objeto usuario para string
+      };
+  
+      // Salva os dados no AsyncStorage
+      await AsyncStorage.setItem(item.id, JSON.stringify(item));
+  
+      // Navega para a página de detalhes da publicação
+      router.push({
+        pathname: "/private/pages/visualizarPublicacao",
+        params: formattedParams,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar publicação ou navegar:", error);
+    }
   };
+  
+  
 
   const getNome = (nome?: string): string => {
     if (!nome) return "Usuário deletado";
@@ -65,29 +111,38 @@ export default function Publicacao({ item, crop }: Readonly<IProps>) {
     return descricao.length < 150 ? descricao : descricao.slice(0, 150) + "...";
   };
 
+  if (!publicacao) {
+    return null; // Pode adicionar um spinner ou placeholder aqui
+  }
+
   return (
     <Pressable onPress={navigate} style={styles.postContainer}>
       <View style={styles.postHeader}>
-        {getFoto(item.usuario?.foto)}
+        {getFoto(publicacao.usuario?.foto)}
         <View style={styles.userInfo}>
-          <Text style={styles.title}>{getTitulo(item.titulo)}</Text>
-          <Text style={styles.categoria}>{item.categoria}</Text>
+          <Text style={styles.title}>{getTitulo(publicacao.titulo)}</Text>
+          <Text style={styles.categoria}>{publicacao.categoria}</Text>
           <View style={styles.subInfo}>
             <Text style={styles.username}>
-              {getNome(item.usuario?.nome as string)}
+              {getNome(publicacao.usuario?.nome)}
             </Text>
-            <Text style={styles.date}>{getFormattedDate(item.dataHora)}</Text>
+            <Text style={styles.date}>
+              {getFormattedDate(publicacao.dataHora)}
+            </Text>
           </View>
         </View>
       </View>
-      <Text style={styles.postContent}>{getDescricao(item.descricao)}</Text>
+      <Text style={styles.postContent}>
+        {getDescricao(publicacao.descricao)}
+      </Text>
       <View style={styles.underInfo}>
-      {item.idUsuarioReporte && item.idUsuarioReporte.length > 0 && (
-        <View style={styles.reports}>
-          <AntDesing name="warning" size={18} color="#FFCC00" />
-          <Text style={styles.reportsText}>Usuários reportaram</Text>
-        </View>
-      )}
+        {publicacao.idUsuarioReporte &&
+          publicacao.idUsuarioReporte.length > 0 && (
+            <View style={styles.reports}>
+              <AntDesing name="warning" size={18} color="#FFCC00" />
+              <Text style={styles.reportsText}>Usuários reportaram</Text>
+            </View>
+          )}
       </View>
     </Pressable>
   );

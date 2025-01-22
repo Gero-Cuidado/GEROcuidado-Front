@@ -10,24 +10,23 @@ import {
 import React, { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { router } from "expo-router";
 import { SelectList } from "react-native-dropdown-select-list";
-import { ECategoriaRotina } from "../../interfaces/rotina.interface";
 import WeekDays from "../../components/weekDay";
 import Calendar from "react-native-vector-icons/Feather";
 import CustomButton from "../../components/CustomButton";
 import MaskInput, { Masks } from "react-native-mask-input";
 import MaskHour from "../../components/MaskHour";
-import { postRotina } from "../../services/rotina.service";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IIdoso } from "../../interfaces/idoso.interface";
 import ErrorMessage from "../../components/ErrorMessage";
-import * as Notifications from "expo-notifications";
-import database from "../../db";
-import { Collection } from "@nozbe/watermelondb";
-import Rotina from "../../model/Rotina";
-import { handleNotificacao, validateFields } from "../../shared/helpers/useNotification";
+
+const categorias = [
+  { key: "GERAL", value: "Geral" },
+  { key: "MEDICAMENTO", value: "Medicamento" },
+  { key: "ALIMENTACAO", value: "Alimentação" },
+  { key: "EXERCICIOS", value: "Exercícios" },
+];
+
 interface IErrors {
   titulo?: string;
   data?: string;
@@ -47,74 +46,29 @@ export default function CadastrarRotina() {
     return isData ? formattedDateArray[0] : formattedDateArray[1];
   };
 
-  const [idoso, setIdoso] = useState<IIdoso>();
   const [titulo, setTitulo] = useState("");
   const [data, setData] = useState(getInitialDateTime());
   const [hora, setHora] = useState(getInitialDateTime(false));
   const [notificacao, setNotificacao] = useState(false);
-  const [expoToken, setExpoToken] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [categoria, setCategoria] = useState<ECategoriaRotina | null>(null);
+  const [categoria, setCategoria] = useState<string | null>(null);
   const [showLoading, setShowLoading] = useState(false);
   const [erros, setErros] = useState<IErrors>({});
   const [showErrors, setShowErrors] = useState(false);
-  const [token, setToken] = useState<string>("");
   const [dias, setDias] = useState<number[]>([]);
 
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
-  };
-
-  const getIdoso = () => {
-    AsyncStorage.getItem("idoso").then((idosoString) => {
-      if (idosoString) {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
-        setIdoso(idosoPayload);
-      }
-    });
-  };
-
   const handleErrors = () => {
-    validateFields(titulo, data, hora, categoria, descricao, setErros);
+    const errors: IErrors = {};
+    if (!titulo) errors.titulo = "O título é obrigatório.";
+    if (!data) errors.data = "A data é obrigatória.";
+    if (!hora) errors.hora = "A hora é obrigatória.";
+    if (!categoria) errors.categoria = "A categoria é obrigatória.";
+    if (!descricao) errors.descricao = "A descrição é obrigatória.";
+    setErros(errors);
   };
-
-
-  const categorias = [
-    { key: ECategoriaRotina.GERAL, value: ECategoriaRotina.GERAL },
-    { key: ECategoriaRotina.MEDICAMENTO, value: ECategoriaRotina.MEDICAMENTO },
-    { key: ECategoriaRotina.ALIMENTACAO, value: ECategoriaRotina.ALIMENTACAO },
-    { key: ECategoriaRotina.EXERCICIOS, value: ECategoriaRotina.EXERCICIOS },
-  ];
-
-  const getDateIsoString = () => {
-    const dateArray = data.split("/");
-
-    return `${dateArray[2]}-${dateArray[1]}-${dateArray[0]}T${hora}:00.000`;
-  };
-
-  const salvarNoBancoLocal = async () => {
-    const rotinaCollection = database.get('rotina') as Collection<Rotina>;
-
-    await database.write(async () => {
-      await rotinaCollection.create((rotina) => {
-        rotina.titulo = titulo;
-        rotina.descricao = descricao;
-        rotina.categoria = String(categoria);
-        rotina.dias = dias.map(String); // Mudar o tipo de dias pra String[]
-        rotina.dataHora = new Date(getDateIsoString());
-        rotina.token = token;
-        rotina.notificacao = notificacao;
-        rotina.dataHoraConcluidos = [];
-        rotina.idIdoso = String(idoso?.id);
-      });
-    });
-
-    // console.log("Estado atual do banco:", await rotinaCollection.query().fetch());
-  }
 
   const salvar = async () => {
+    handleErrors();
     if (Object.keys(erros).length > 0) {
       setShowErrors(true);
       return;
@@ -122,44 +76,44 @@ export default function CadastrarRotina() {
 
     try {
       setShowLoading(true);
-      await salvarNoBancoLocal();
+      const rotina = {
+        titulo,
+        data,
+        hora,
+        notificacao,
+        descricao,
+        categoria,
+        dias,
+      };
+      const rotinas = JSON.parse((await AsyncStorage.getItem("rotinas")) || "[]");
+      rotinas.push(rotina);
+      await AsyncStorage.setItem("rotinas", JSON.stringify(rotinas));
       Toast.show({
         type: "success",
         text1: "Sucesso!",
-        text2: "Rotina criada",
+        text2: "Rotina criada com sucesso.",
       });
-      router.replace({
-        pathname: "private/tabs/rotinas",
-      });
-
     } catch (err) {
-      const error = err as { message: string };
-      console.log(error);
+      console.error("Erro ao salvar a rotina:", err);
       Toast.show({
         type: "error",
         text1: "Erro!",
-        text2: "Algo deu errado na criação da rotina :(",
+        text2: "Algo deu errado ao salvar a rotina.",
       });
     } finally {
       setShowLoading(false);
     }
   };
 
-  const goBack = () => {
-    router.push({
-      pathname: "/private/tabs/rotinas",
-    });
-  };
-
   const setSuggestedTitle = () => {
     switch (categoria) {
-      case ECategoriaRotina.ALIMENTACAO:
+      case "ALIMENTACAO":
         setTitulo("Se Alimentar");
         break;
-      case ECategoriaRotina.MEDICAMENTO:
+      case "MEDICAMENTO":
         setTitulo("Tomar Medicamento");
         break;
-      case ECategoriaRotina.EXERCICIOS:
+      case "EXERCICIOS":
         setTitulo("Fazer Exercício");
         break;
       default:
@@ -167,19 +121,13 @@ export default function CadastrarRotina() {
     }
   };
 
-
-  useEffect(() => getIdoso(), []);
-  useEffect(() => getToken(), []);
   useEffect(() => setSuggestedTitle(), [categoria]);
   useEffect(() => handleErrors(), [titulo, data, hora, categoria, descricao]);
-  useEffect(() => {
-    handleNotificacao(notificacao, setNotificacao, setExpoToken);
-  }, [notificacao]);
 
   return (
     <ScrollView>
       <View style={styles.header}>
-        <Pressable onPress={goBack}>
+        <Pressable onPress={() => console.log("Voltar")}>
           <Icon name="chevron-left" size={40} color="#fff" />
         </Pressable>
         <Text style={styles.tituloheader}>Nova rotina</Text>
@@ -189,13 +137,13 @@ export default function CadastrarRotina() {
         <View style={styles.titulo}>
           <TextInput
             value={titulo}
-            onChangeText={(titulo) => setTitulo(titulo)}
+            onChangeText={setTitulo}
             placeholder="Adicionar título"
             placeholderTextColor={"#3D3D3D"}
             style={styles.inputTitulo}
           />
         </View>
-        <View style={styles.erroTitulo} testID="Erro-titulo">
+        <View style={styles.erroTitulo}>
           <ErrorMessage show={showErrors} text={erros.titulo} />
         </View>
         <View style={styles.dataHora}>
@@ -209,7 +157,7 @@ export default function CadastrarRotina() {
             placeholderTextColor={"#3D3D3D"}
           />
         </View>
-        <View style={styles.erro} testID="Erro-data">
+        <View style={styles.erro}>
           <ErrorMessage show={showErrors} text={erros.data} />
         </View>
 
@@ -225,40 +173,26 @@ export default function CadastrarRotina() {
             placeholderTextColor={"#3D3D3D"}
             value={hora}
             maxLength={5}
-            inputMaskChange={(hora) => setHora(hora)}
+            inputMaskChange={setHora}
           />
         </View>
-        <View style={styles.erro} testID="Erro-hora">
+        <View style={styles.erro}>
           <ErrorMessage show={showErrors} text={erros.hora} />
         </View>
 
+        <View style={styles.categoria}>
+          <Icon style={styles.iconCategoria} name="view-grid-outline" />
+          <SelectList
+            boxStyles={styles.dropdown}
+            inputStyles={styles.categoriaSelecionada}
+            data={categorias}
+            setSelected={setCategoria}
+            placeholder="Categoria"
+            search={false}
+          />
+        </View>
         <View>
-          <View style={styles.categoria}>
-            {(!categoria || categoria == ECategoriaRotina.GERAL) && (
-              <Icon style={styles.iconCategoria} name="view-grid-outline" />
-            )}
-            {categoria === ECategoriaRotina.ALIMENTACAO && (
-              <Icon style={styles.iconCategoria} name="food-apple-outline" />
-            )}
-            {categoria === ECategoriaRotina.MEDICAMENTO && (
-              <Icon style={styles.iconCategoria} name="medical-bag" />
-            )}
-            {categoria === ECategoriaRotina.EXERCICIOS && (
-              <Icon style={styles.iconCategoria} name="dumbbell" />
-            )}
-            {/* <Icon style={styles.iconCategoria} name="view-grid-outline" /> */}
-            <SelectList
-              boxStyles={styles.dropdown}
-              inputStyles={styles.categoriaSelecionada}
-              data={categorias}
-              setSelected={setCategoria}
-              placeholder="Categoria"
-              search={false}
-            />
-          </View>
-          <View testID="Erro-categoria">
-            <ErrorMessage show={showErrors} text={erros.categoria}/>
-          </View>
+          <ErrorMessage show={showErrors} text={erros.categoria} />
         </View>
 
         <View style={styles.repete}>
@@ -292,7 +226,7 @@ export default function CadastrarRotina() {
             placeholderTextColor={"#3D3D3D"}
           />
         </View>
-        <View style={styles.erro} testID="Erro-descricao">
+        <View style={styles.erro}>
           <ErrorMessage show={showErrors} text={erros.descricao} />
         </View>
 
@@ -307,6 +241,7 @@ export default function CadastrarRotina() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   notificacaoContainer: {

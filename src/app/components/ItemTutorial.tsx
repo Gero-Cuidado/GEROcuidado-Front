@@ -9,7 +9,7 @@ interface Props {
 export default function ItemTutorial({ imageSrc, textEl }: Readonly<Props>) {
   return (
     <View style={styles.container}>
-      <Image style={styles.image} source={imageSrc} />
+     <Image style={styles.image} source={imageSrc} />
       {textEl}
     </View>
   );

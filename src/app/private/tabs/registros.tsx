@@ -1,29 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text, Image, Dimensions } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, Dimensions } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
 import NaoAutenticado from "../../components/NaoAutenticado";
-import { IIdoso } from "../../interfaces/idoso.interface";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import IdosoNaoSelecionado from "../../components/IdosoNaoSelecionado";
 import CardMetrica from "../../components/CardMetrica";
-import { FlatList } from "react-native";
-import { IMetrica, IMetricaFilter } from "../../interfaces/metricas.interface";
 import { router } from "expo-router";
-import { Pressable } from "react-native";
-import { getAllMetrica } from "../../services/metrica.service";
-import Toast from "react-native-toast-message";
-import database from "../../db";
-import { Q } from "@nozbe/watermelondb";
-import { hasFoto } from "../../shared/helpers/foto.helper";
 import { getFoto } from "../../shared/helpers/photo.helper";
 
 export default function Registros() {
-  const [user, setUser] = useState<IUser | undefined>(undefined);
-  const [idoso, setIdoso] = useState<IIdoso>();
-  const [metricas, setMetricas] = useState<IMetrica[]>([]);
+  const [user, setUser] = useState<any | undefined>(undefined);  // Removido o tipo IUser
+  const [idoso, setIdoso] = useState<any | undefined>(undefined);  // Removido o tipo IIdoso
+  const [metricas, setMetricas] = useState<any[]>([]);  // Removido o tipo IMetrica
   const [loading, setLoading] = useState(true);
-  console.log("AOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+
   const handleUser = () => {
     AsyncStorage.getItem("usuario").then((response) => {
       const usuario = JSON.parse(response as string);
@@ -38,16 +27,15 @@ export default function Registros() {
         return;
       }
       try {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
+        const idosoPayload = JSON.parse(idosoString);
         setIdoso(idosoPayload);
       } catch (error) {
         console.error("Erro ao parsear idoso do AsyncStorage:", error);
       }
     });
   };
-  
 
-  const visualizarMetrica = (item: IMetrica) => {
+  const visualizarMetrica = (item: any) => {
     router.push({
       pathname: "private/pages/visualizarMetrica",
       params: {
@@ -58,47 +46,25 @@ export default function Registros() {
       },
     });
   };
-  
 
   const getMetricas = async () => {
     if (!idoso) return;
-  
-    const metricasCollection = database.get('metrica');
-  
+
     try {
       setLoading(true);
-      const idosoMetricas = await metricasCollection.query(Q.where('idoso_id', idoso.id)).fetch();
-  
-      // Mapeamento adequado para a interface IMetrica
-      const metricasData: IMetrica[] = idosoMetricas
-        .map((metrica: any) => {
-          if (!metrica._raw) {
-            console.error("Objeto metrica retornado é inválido:", metrica);
-            return null;  // Retorna null se o objeto for inválido
-          }
-  
-          // Assegura que a propriedade valorMaximo seja opcional e retornável
-          return {
-            id: metrica._raw.id,
-            idIdoso: metrica._raw.idoso_id,
-            categoria: metrica._raw.categoria,
-            valorMaximo: metrica._raw.valorMaximo ?? undefined,  // Se não existir, valorMaximo será undefined
-          } as IMetrica; // Cast explícito para IMetrica
-        })
-        .filter((item): item is IMetrica => item !== null);  // Filtra null corretamente
-  
-      setMetricas(metricasData);
+      const storedMetricas = await AsyncStorage.getItem("metricas");
+      const metricasData = storedMetricas ? JSON.parse(storedMetricas) : [];
+      const idosoMetricas = metricasData.filter(
+        (metrica: any) => metrica.idIdoso === idoso.id
+      );
+
+      setMetricas(idosoMetricas);
     } catch (err) {
       console.log("Erro ao obter métricas do idoso:", err);
     } finally {
       setLoading(false);
     }
   };
-  
-  
-  
-  
-  
 
   useEffect(() => handleUser(), []);
   useEffect(() => getIdoso(), []);
@@ -132,6 +98,7 @@ export default function Registros() {
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

@@ -1,9 +1,7 @@
-// notificacoes.ts
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import React from 'react';
-import { ECategoriaRotina } from '../../interfaces/rotina.interface';
-import { ETipoSanguineo } from '../../interfaces/idoso.interface';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const handleNotificacao = async (
   notificacao: boolean,
@@ -45,6 +43,13 @@ export const handleNotificacao = async (
     projectId: "7028a81c-adee-41de-91a7-b7e80535a448",
   });
   setExpoToken(response.data);
+
+  // Armazena o token de notificação no AsyncStorage
+  try {
+    await AsyncStorage.setItem('expoPushToken', response.data);
+  } catch (error) {
+    console.error("Erro ao salvar token no AsyncStorage:", error);
+  }
 };
 
 interface IErrors {
@@ -59,7 +64,7 @@ export const validateFields = (
   titulo: string,
   data: string,
   hora: string,
-  categoria: ECategoriaRotina | null,
+  categoria: string | null, // Alterado para string simples para remover a dependência de interfaces
   descricao: string,
   setErros: React.Dispatch<React.SetStateAction<IErrors>>
 ) => {
@@ -96,8 +101,12 @@ export const validateFields = (
 };
 
 export const getTipoSanguineoOptions = () => {
-    return Object.values(ETipoSanguineo).map((tipo) => ({
-      key: tipo,
-      value: tipo,
-    }));
-  };
+  // Definição dos tipos sanguíneos sem dependência de enums ou interfaces externas
+  const tiposSanguineos = [
+    "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
+  ];
+  return tiposSanguineos.map((tipo) => ({
+    key: tipo,
+    value: tipo,
+  }));
+};

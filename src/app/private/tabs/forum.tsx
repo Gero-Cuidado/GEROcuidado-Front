@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -5,45 +6,35 @@ import {
   Switch,
   Text,
   View,
+  ScrollView,
 } from "react-native";
-import React, { useEffect, useState } from "react";
-
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
 import Publicacao from "../../components/Publicacao";
-import { getAllPublicacao } from "../../services/forum.service";
-import Toast from "react-native-toast-message";
-import { ECategoriaPesquisa, ECategoriaPublicacao, IOrder, IPublicacao } from "../../interfaces/forum.interface";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
 import BarraPesquisa from "../../components/BarraPesquisa";
-import { ScrollView } from "react-native";
 import { SelectList } from "react-native-dropdown-select-list";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
 
 export default function Forum() {
-  const [publicacoes, setPublicacoes] = useState<IPublicacao[]>([]);
+  const [publicacoes, setPublicacoes] = useState([]);
   const [showCarregarMais, setShowCarregarMais] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingCarregarMais, setLoadingCarregarMais] = useState(true);
-  const [usuario, setUsuario] = useState<IUser | null>(null);
+  const [usuario, setUsuario] = useState(null);
   const [offset, setOffset] = useState(0);
   const [titulo, setTitulo] = useState("");
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [timer, setTimer] = useState(null);
   const [isReported, setIsReported] = useState(false);
-  const [categoria, setCategoria] = useState<ECategoriaPesquisa>(ECategoriaPesquisa.TODAS);
-  const order: IOrder = {
-    column: "dataHora",
-    dir: "DESC",
-  };
+  const [categoria, setCategoria] = useState("TODAS");
 
   const data = [
-    {key: ECategoriaPesquisa.TODAS, value: ECategoriaPesquisa.TODAS},
-    {key: ECategoriaPesquisa.ALIMENTACAO, value: ECategoriaPesquisa.ALIMENTACAO},
-    {key: ECategoriaPesquisa.SAUDE, value: ECategoriaPesquisa.SAUDE},
-    {key: ECategoriaPesquisa.EXERCICIOS, value: ECategoriaPesquisa.EXERCICIOS},
-    {key: ECategoriaPesquisa.GERAL, value: ECategoriaPesquisa.GERAL},
-
-  ]
+    { key: "TODAS", value: "TODAS" },
+    { key: "ALIMENTACAO", value: "ALIMENTACAO" },
+    { key: "SAUDE", value: "SAUDE" },
+    { key: "EXERCICIOS", value: "EXERCICIOS" },
+    { key: "GERAL", value: "GERAL" },
+  ];
 
   const novaPublicacao = () => {
     router.push("private/pages/criaPublicacao");
@@ -51,69 +42,26 @@ export default function Forum() {
 
   const getUsuario = () => {
     AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string) as IUser;
+      const usuario = JSON.parse(response || "{}");
       setUsuario(usuario);
     });
   };
 
-  const getPublicacoes = (
-    anterior: IPublicacao[],
-    titulo: string,
-    isReported: boolean,
-    offset: number,
-  ) => {
+  const getPublicacoes = (anterior, titulo, isReported, offset) => {
     setOffset(offset);
     setTitulo(titulo);
 
-    if (categoria === ECategoriaPesquisa.TODAS) {
-      getAllPublicacao(offset, { titulo, isReported }, order)
-        .then((response) => {
-          const newPublicacoes = response.data as IPublicacao[];
+    // Simulando uma busca de publicações
+    const newPublicacoes = [
+      { id: 1, titulo: "Publicação 1", categoria: "SAUDE" },
+      { id: 2, titulo: "Publicação 2", categoria: "ALIMENTACAO" },
+    ]; // Substitua por dados de teste ou locais
 
-          if (newPublicacoes.length === 0) {
-            setShowCarregarMais(false);
-          }
-
-          setPublicacoes([...anterior, ...newPublicacoes]);
-        })
-        .catch((err) => {
-          const error = err as { message: string };
-          Toast.show({
-            type: "error",
-            text1: "Erro!",
-            text2: error.message,
-          });
-        })
-        .finally(() => {
-          setLoading(false);
-          setLoadingCarregarMais(false);
-        });
-
-    } else {
-      getAllPublicacao(offset, { titulo, isReported, categoria }, order)
-        .then((response) => {
-          const newPublicacoes = response.data as IPublicacao[];
-
-          if (newPublicacoes.length === 0) {
-            setShowCarregarMais(false);
-          }
-
-          setPublicacoes([...anterior, ...newPublicacoes]);
-        })
-        .catch((err) => {
-          const error = err as { message: string };
-          Toast.show({
-            type: "error",
-            text1: "Erro!",
-            text2: error.message,
-          });
-        })
-        .finally(() => {
-          setLoading(false);
-          setLoadingCarregarMais(false);
-        });
+    if (newPublicacoes.length === 0) {
+      setShowCarregarMais(false);
     }
 
+    setPublicacoes([...anterior, ...newPublicacoes]);
   };
 
   const handleCarregarMais = () => {
@@ -121,26 +69,26 @@ export default function Forum() {
     getPublicacoes(publicacoes, titulo, isReported, offset + 1);
   };
 
-  const handlePesquisar = (newTitulo: string) => {
+  const handlePesquisar = (newTitulo) => {
     setShowCarregarMais(true);
     setLoading(true);
     getPublicacoes([], newTitulo, isReported, 0);
   };
 
-  const handleReports = (newValue: boolean) => {
+  const handleReports = (newValue) => {
     setShowCarregarMais(true);
     setLoading(true);
     getPublicacoes([], titulo, newValue, 0);
   };
 
-  const debounceReports = (newTitulo: boolean) => {
+  const debounceReports = (newTitulo) => {
     setIsReported(newTitulo);
     if (timer) clearTimeout(timer);
     const temp = setTimeout(() => handleReports(newTitulo), 1000);
     setTimer(temp);
   };
 
-  const debouncePesquisar = (newTitulo: string) => {
+  const debouncePesquisar = (newTitulo) => {
     if (timer) clearTimeout(timer);
     const temp = setTimeout(() => handlePesquisar(newTitulo), 1000);
     setTimer(temp);
@@ -156,28 +104,25 @@ export default function Forum() {
         <BarraPesquisa callbackFn={debouncePesquisar} />
       </View>
 
-
       <View style={styles.botoes}>
         {!usuario?.admin && (
-         <View style={styles.list}>
-          <SelectList
-            data={data}
-            setSelected={(item: ECategoriaPesquisa) => {
-              setCategoria(item);
-            }}
-            search={false}
-            boxStyles={styles.boxDropDown}
-            inputStyles={styles.boxInputDropDown}
-            dropdownStyles={styles.dropDown}
-            defaultOption={{key: ECategoriaPesquisa.TODAS, value: ECategoriaPesquisa.TODAS}}
-            placeholder="Todas"
-          />
-      </View>
-
+          <View style={styles.list}>
+            <SelectList
+              data={data}
+              setSelected={(item) => {
+                setCategoria(item);
+              }}
+              search={false}
+              boxStyles={styles.boxDropDown}
+              inputStyles={styles.boxInputDropDown}
+              dropdownStyles={styles.dropDown}
+              defaultOption={{ key: "TODAS", value: "TODAS" }}
+              placeholder="Todas"
+            />
+          </View>
         )}
 
-
-        {usuario?.id && usuario?.admin && (
+        {usuario?.admin && (
           <View style={styles.reportadas}>
             <Switch
               trackColor={{ false: "#767577", true: "#2CCDB5" }}
@@ -189,32 +134,12 @@ export default function Forum() {
         )}
 
         {usuario?.id && (
-          <Pressable
-            style={styles.botaoCriarPublicacao}
-            onPress={novaPublicacao}
-          >
+          <Pressable style={styles.botaoCriarPublicacao} onPress={novaPublicacao}>
             <Icon name="plus" color={"white"} size={20}></Icon>
             <Text style={styles.textoBotaoPesquisar}>Nova publicação</Text>
           </Pressable>
         )}
       </View>
-      {usuario?.admin && (
-         <View style={styles.list}>
-        <SelectList
-          data={data}
-          setSelected={(item: ECategoriaPesquisa) => {
-            setCategoria(item);
-          }}
-          search={false}
-          boxStyles={styles.boxDropDown}
-          inputStyles={styles.boxInputDropDown}
-          dropdownStyles={styles.dropDown}
-          defaultOption={data[4]}
-          placeholder="Todas"
-        />
-      </View>
-
-        )}
 
       {loading && (
         <View style={styles.loading}>
@@ -230,24 +155,15 @@ export default function Forum() {
             </View>
           ))}
 
-          {publicacoes.length > 0 &&
-            publicacoes.length % 10 === 0 &&
-            showCarregarMais && (
-              <Pressable
-                style={styles.botaoCarregarMais}
-                onPress={handleCarregarMais}
-              >
-                {loadingCarregarMais && (
-                  <ActivityIndicator size="small" color="#2CCDB5" />
-                )}
+          {publicacoes.length > 0 && publicacoes.length % 10 === 0 && showCarregarMais && (
+            <Pressable style={styles.botaoCarregarMais} onPress={handleCarregarMais}>
+              {loadingCarregarMais && <ActivityIndicator size="small" color="#2CCDB5" />}
 
-                {!loadingCarregarMais && (
-                  <Text style={styles.botaoCarregarMaisText}>
-                    Carregar mais
-                  </Text>
-                )}
-              </Pressable>
-            )}
+              {!loadingCarregarMais && (
+                <Text style={styles.botaoCarregarMaisText}>Carregar mais</Text>
+              )}
+            </Pressable>
+          )}
         </ScrollView>
       )}
     </View>

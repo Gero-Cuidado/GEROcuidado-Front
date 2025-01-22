@@ -1,40 +1,61 @@
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
 import NaoAutenticado from "../../components/NaoAutenticado";
-import { View, StyleSheet, Pressable, Text } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useNavigation } from "@react-navigation/native";
 
 export default function VisualizarValoresMedidos() {
-  const [user, setUser] = useState<IUser | undefined>(undefined);
+  const [user, setUser] = useState(null); // Removido tipo IUser
   const [selectedMetric, setSelectedMetric] = useState<string | undefined>(
-    undefined,
+    undefined
   );
   const [hasData, setHasData] = useState<boolean>(false);
   const navigation = useNavigation();
 
-  const handleUser = () => {
-    AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string);
+  const handleUser = async () => {
+    try {
+      const response = await AsyncStorage.getItem("usuario");
+      const usuario = response ? JSON.parse(response) : null;
       setUser(usuario);
-    });
+    } catch (error) {
+      console.error("Erro ao carregar usuário:", error);
+    }
   };
 
   useEffect(() => {
     handleUser();
 
-    AsyncStorage.getItem("selectedMetric").then((metric) => {
-      setSelectedMetric(metric || "");
-    });
+    const loadSelectedMetric = async () => {
+      try {
+        const metric = await AsyncStorage.getItem("selectedMetric");
+        setSelectedMetric(metric || "");
+      } catch (error) {
+        console.error("Erro ao carregar a métrica selecionada:", error);
+      }
+    };
 
-    const temDados = false;
+    loadSelectedMetric();
+
+    // Simulando a ausência de dados
+    const temDados = false; // Ajustar conforme necessidade
     setHasData(temDados);
   }, []);
 
-  const novoValor = () => {};
+  const novoValor = () => {
+    // Lógica para registrar um novo valor de métrica (exemplo: abrir formulário de inserção)
+    console.log("Novo valor para métrica");
+  };
 
-  const apagarMetrica = () => {};
+  const apagarMetrica = async () => {
+    try {
+      await AsyncStorage.removeItem("selectedMetric"); // Apagar métrica selecionada
+      setSelectedMetric(""); // Limpar o estado local
+      console.log("Métrica apagada");
+    } catch (error) {
+      console.error("Erro ao apagar métrica:", error);
+    }
+  };
 
   return !user?.id ? (
     <NaoAutenticado />
@@ -47,8 +68,7 @@ export default function VisualizarValoresMedidos() {
         >
           <Icon name="chevron-left" size={20} color="white" />
         </Pressable>
-        <Text style={styles.headerText}>{selectedMetric}</Text>{" "}
-        {/*Substituir lógica tual de puxar o título/categoria da métrica*/}
+        <Text style={styles.headerText}>{selectedMetric || "Métrica"}</Text>
       </View>
 
       <Pressable style={styles.botaoNovoValor} onPress={novoValor}>
@@ -58,10 +78,9 @@ export default function VisualizarValoresMedidos() {
 
       {hasData ? (
         <View>
-          {/* ... outros componentes relacionados aos dados cadastrados */}
+          {/* Exibição dos dados cadastrados (adicionar componente para exibir os dados) */}
         </View>
       ) : (
-        // Conteúdo para nenhum dado cadastrado
         <Text style={styles.nenhumDado}>Nenhum dado cadastrado</Text>
       )}
 
@@ -71,6 +90,7 @@ export default function VisualizarValoresMedidos() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

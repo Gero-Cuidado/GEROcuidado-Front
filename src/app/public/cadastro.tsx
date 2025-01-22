@@ -1,15 +1,13 @@
-import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, TextInput, StyleSheet, ScrollView } from "react-native";
+import { View, TextInput, ScrollView, StyleSheet } from "react-native";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/BackButton";
 import CustomButton from "../components/CustomButton";
 import ErrorMessage from "../components/ErrorMessage";
 import UploadImage from "../components/UploadImage";
-import { postUser } from "../services/user.service";
-
+import { router } from "expo-router";
 interface IErrors {
   nome?: string;
   email?: string;
@@ -41,29 +39,31 @@ export default function Cadastro() {
 
     try {
       setShowLoading(true);
-      const response = await postUser(body);
+
+      // Simulando o armazenamento local, ao invés de enviar para um servidor
+      const userData = { nome, email, senha, foto };
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+
       Toast.show({
         type: "success",
         text1: "Sucesso!",
-        text2: response.message as string,
+        text2: "Cadastro realizado com sucesso!",
       });
+
+      // Redirecionamento para tutorial
       router.push("/public/tutorial");
     } catch (err) {
-      const error = err as { message: string };
       Toast.show({
         type: "error",
         text1: "Erro!",
-        text2: error.message,
+        text2: "Ocorreu um erro ao realizar o cadastro.",
       });
     } finally {
       setShowLoading(false);
     }
   };
 
-  useEffect(
-    () => handleErrors(),
-    [nome, email, confirmaEmail, senha, confirmaSenha],
-  );
+  useEffect(() => handleErrors(), [nome, email, confirmaEmail, senha, confirmaSenha]);
 
   const handleErrors = () => {
     const erros: IErrors = {};
@@ -203,6 +203,7 @@ export default function Cadastro() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   voltar: {

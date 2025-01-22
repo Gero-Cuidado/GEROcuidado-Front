@@ -1,15 +1,33 @@
 import React from "react";
 import { View, Image, Text, StyleSheet } from "react-native";
-import { IPublicacaoUsuario } from "../interfaces/forum.interface";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import AntDesing from "react-native-vector-icons/AntDesign";
-import { hasFoto } from "../shared/helpers/foto.helper";
-import { getFoto } from "../shared/helpers/photo.helper";
+import AntDesign from "react-native-vector-icons/AntDesign";
+
+interface IPublicacaoUsuario {
+  foto?: string; 
+  nome?: string; 
+  titulo: string; 
+  descricao: string; 
+  categoria: string; 
+  dataHora: Date | string; 
+  idUsuarioReporte?: string[];    
+}
+
 interface IProps {
   item: IPublicacaoUsuario;
 }
 
 export default function PublicacaoVisualizar({ item }: IProps) {
+  const getFoto = (foto?: string) => {
+    if (foto) {
+      return <Image source={{ uri: foto.imageUrl }} style={styles.fotoPerfil} />;
+    }
+    return (
+      <View style={[styles.fotoPerfil, styles.semFoto]}>
+        <Icon name="account-circle" size={30} color="#888" style={styles.semFotoIcon} />
+      </View>
+    );
+  };
 
   const getFormattedDate = (payload: Date | string): string => {
     const date = new Date(payload);
@@ -29,12 +47,12 @@ export default function PublicacaoVisualizar({ item }: IProps) {
         <Text style={styles.date}>{getFormattedDate(item.dataHora)}</Text>
       </View>
       <View style={styles.secondUnderInfo}>
-      {item.idUsuarioReporte && item.idUsuarioReporte.length > 0 && (
-        <View style={styles.reports}>
-          <AntDesing name="warning" size={18} color="#FFCC00" />
-          <Text style={styles.reportsText}>Usuários reportaram</Text>
-        </View>
-      )}
+        {item.idUsuarioReporte && item.idUsuarioReporte.length > 0 && (
+          <View style={styles.reports}>
+            <AntDesign name="warning" size={18} color="#FFCC00" />
+            <Text style={styles.reportsText}>Usuários reportaram</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -64,6 +82,8 @@ const styles = StyleSheet.create({
     width: 65,
     aspectRatio: 1,
     borderRadius: 100,
+    backgroundColor: "#EFEFF0",
+    overflow: "hidden",
   },
   username: {
     color: "#000000",
@@ -103,15 +123,13 @@ const styles = StyleSheet.create({
     color: "#FFCC00",
     marginLeft: 3,
   },
-  semFoto: { position: "relative", backgroundColor: "#EFEFF0" },
+  semFoto: {
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   semFotoIcon: {
-    position: "absolute",
-    right: "38%",
-    bottom: "38%",
     opacity: 0.4,
-    margin: "auto",
-    alignSelf: "center",
-    zIndex: 1,
   },
   categoria: {
     marginRight: 15,

@@ -4,32 +4,20 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
+  StyleSheet
 } from "react-native";
 import AntDesing from "react-native-vector-icons/AntDesign";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import {
-  IPublicacao,
-  IPublicacaoParams,
-  IPublicacaoUsuario,
-} from "../../interfaces/forum.interface";
-import { IUser } from "../../interfaces/user.interface";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import PublicacaoVisualizar from "../../components/PublicacaoVisualizar";
 import BackButton from "../../components/BackButton";
 import ModalConfirmation from "../../components/ModalConfirmation";
-import {
-  deletePublicacaoById,
-  updatePublicacao,
-} from "../../services/forum.service";
-import { ECategoriaPublicacao } from "../../interfaces/forum.interface";
 import Toast from "react-native-toast-message";
 
 export default function VisualizarPublicacao() {
-  
-  const params = useLocalSearchParams() as unknown as IPublicacaoParams;
+  const params = useLocalSearchParams() as unknown as any;  // Remover a interface
   const [idUsuario, setIdUsuario] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [modalVisibleApagar, setModalVisibleApagar] = useState(false);
@@ -37,26 +25,24 @@ export default function VisualizarPublicacao() {
   const [showLoadingApagar, setShowLoadingApagar] = useState(false);
   const [showLoadingReportar, setShowLoadingReportar] = useState(false);
   const [token, setToken] = useState<string>("");
-  const [publicacao, setPublicacao] = useState<IPublicacaoUsuario | null>(null);
+  const [publicacao, setPublicacao] = useState<any | null>(null); // Remover a interface
 
   const mapIdUsuarioReporte = (payload: string) => {
     if (!payload) return [];
-  
     return payload.split(",").map((item) => Number(item));
-  };  
-
-// Verifique como você obtém a publicação dos parâmetros
-const getPublicacaoFromParams = () => {
-  const payload: IPublicacaoUsuario = {
-    ...params,
-    idUsuarioReporte: mapIdUsuarioReporte(params.idUsuarioReporte),
   };
-  setPublicacao(payload);
-};
+
+  const getPublicacaoFromParams = () => {
+    const payload = {
+      ...params,
+      idUsuarioReporte: mapIdUsuarioReporte(params.idUsuarioReporte),
+    };
+    setPublicacao(payload);
+  };
 
   const getUsuario = () => {
     AsyncStorage.getItem("usuario").then((response) => {
-      const usuario = JSON.parse(response as string) as IUser;
+      const usuario = JSON.parse(response as string);
       setIdUsuario(usuario?.id);
       setIsAdmin(usuario?.admin);
     });
@@ -69,47 +55,47 @@ const getPublicacaoFromParams = () => {
   };
 
   const editarPublicacao = () => {
-    const pub = publicacao ?? { id: 0, titulo: "", descricao: "", dataHora: new Date(), categoria: ECategoriaPublicacao.GERAL, idUsuario: 0, idUsuarioReporte: [] };
+    const pub = publicacao ?? { id: 0, titulo: "", descricao: "", dataHora: new Date(), categoria: "GERAL", idUsuario: 0, idUsuarioReporte: [] };
     router.push({
       pathname: "/private/pages/editarPublicacao",
       params: {
         id: pub.id,
         titulo: pub.titulo,
         descricao: pub.descricao,
-        dataHora: pub.dataHora.toString(), // Converte para string se necessário
+        dataHora: pub.dataHora.toString(),
         categoria: pub.categoria,
         idUsuario: pub.idUsuario,
-        idUsuarioReporte: pub.idUsuarioReporte.join(","), // Converte o array para string se necessário
+        idUsuarioReporte: pub.idUsuarioReporte.join(","),
       },
     });
-  };  
+  };
 
-  const apagarPublicacao = async () => {
+  const apagarPublicacao = () => {
     setModalVisibleApagar(false);
     setShowLoadingApagar(true);
 
-    const id = (publicacao as IPublicacaoUsuario).id;
+    const id = publicacao?.id;
 
     try {
-      await deletePublicacaoById(id, token);
+      // Simular a exclusão localmente
+      console.log("Publicação apagada:", id);
       router.replace("/private/tabs/forum");
     } catch (err) {
-      const error = err as { message: string };
       Toast.show({
         type: "error",
         text1: "Erro!",
-        text2: error.message,
+        text2: "Falha ao apagar a publicação.",
       });
     } finally {
       setShowLoadingApagar(false);
     }
   };
 
-  const reportarPublicacao = async () => {
+  const reportarPublicacao = () => {
     setShowLoadingReportar(true);
     setModalVisibleReportar(false);
 
-    const publicacaoLoaded = publicacao as IPublicacaoUsuario;
+    const publicacaoLoaded = publicacao;
 
     const body = {
       idUsuarioReporte: [
@@ -118,14 +104,15 @@ const getPublicacaoFromParams = () => {
       ],
     };
 
+    // Simular a atualização local
     updateReporte(publicacaoLoaded, body);
   };
 
-  const cancelarReporte = async () => {
+  const cancelarReporte = () => {
     setShowLoadingReportar(true);
     setModalVisibleReportar(false);
 
-    const publicacaoLoaded = publicacao as IPublicacaoUsuario;
+    const publicacaoLoaded = publicacao;
 
     const idRemovido = publicacaoLoaded.idUsuarioReporte.filter(
       (id) => id !== Number(idUsuario),
@@ -135,25 +122,22 @@ const getPublicacaoFromParams = () => {
       idUsuarioReporte: idRemovido,
     };
 
+    // Simular a atualização local
     updateReporte(publicacaoLoaded, body);
   };
 
-  const updateReporte = async (
-    publicacaoLoaded: IPublicacaoUsuario,
-    body: Partial<IPublicacao>,
-  ) => {
+  const updateReporte = (publicacaoLoaded: any, body: Partial<any>) => {
     try {
-      const response = await updatePublicacao(publicacaoLoaded.id, body, token);
+      // Simular a atualização local
       setPublicacao({
         ...publicacao,
-        ...(response.data as IPublicacaoUsuario),
+        ...(body as any),
       });
     } catch (err) {
-      const error = err as { message: string };
       Toast.show({
         type: "error",
         text1: "Erro!",
-        text2: error.message,
+        text2: "Falha ao atualizar a publicação.",
       });
     } finally {
       setShowLoadingReportar(false);
@@ -174,12 +158,12 @@ const getPublicacaoFromParams = () => {
 
       <ScrollView>
         <View style={styles.actions}>
-          {(isAdmin || publicacao?.idUsuario == idUsuario) && (
+          {(isAdmin || publicacao?.idUsuario === idUsuario) && (
             <Pressable
-          onPress={() => setModalVisibleApagar(true)}
-          style={[styles.actionButton, styles.deleteButton]}
-          testID="deleteBtn"
-                    >
+              onPress={() => setModalVisibleApagar(true)}
+              style={[styles.actionButton, styles.deleteButton]}
+              testID="deleteBtn"
+            >
               {showLoadingApagar && (
                 <ActivityIndicator size="small" color="#FFF" />
               )}
@@ -193,12 +177,12 @@ const getPublicacaoFromParams = () => {
             </Pressable>
           )}
 
-          {idUsuario && publicacao?.idUsuario != idUsuario && (
+          {idUsuario && publicacao?.idUsuario !== idUsuario && (
             <Pressable
-                onPress={() => setModalVisibleReportar(true)}
-                style={[styles.actionButton, styles.reportButton]}
-                testID="reportBtn"
-              >
+              onPress={() => setModalVisibleReportar(true)}
+              style={[styles.actionButton, styles.reportButton]}
+              testID="reportBtn"
+            >
               {showLoadingReportar && (
                 <ActivityIndicator size="small" color="#FFF" />
               )}
@@ -220,12 +204,12 @@ const getPublicacaoFromParams = () => {
             </Pressable>
           )}
 
-          {idUsuario && publicacao?.idUsuario == idUsuario && (
+          {idUsuario && publicacao?.idUsuario === idUsuario && (
             <Pressable
-            onPress={editarPublicacao}
-            style={[styles.actionButton, styles.editButton]}
-            testID="editBtn"
-          >
+              onPress={editarPublicacao}
+              style={[styles.actionButton, styles.editButton]}
+              testID="editBtn"
+            >
               <Text style={styles.actionButtonText}>Editar</Text>
               <Icon name="pencil" size={18} color={"white"} />
             </Pressable>
@@ -235,7 +219,7 @@ const getPublicacaoFromParams = () => {
         {publicacao && <PublicacaoVisualizar item={publicacao} />}
       </ScrollView>
 
-        <ModalConfirmation
+      <ModalConfirmation
         visible={modalVisibleApagar}
         callbackFn={apagarPublicacao}
         closeModal={() => setModalVisibleApagar(false)}
@@ -243,29 +227,30 @@ const getPublicacaoFromParams = () => {
         messageButton="Apagar"
         testID="deleteModal"
       />
-        <ModalConfirmation
-          visible={modalVisibleReportar}
-          callbackFn={
-            publicacao?.idUsuarioReporte.includes(Number(idUsuario))
-              ? cancelarReporte
-              : reportarPublicacao
-          }
-          closeModal={() => setModalVisibleReportar(false)}
-          message={
-            publicacao?.idUsuarioReporte.includes(Number(idUsuario))
-              ? "Desfazer reporte?"
-              : "Reportar publicação?"
-          }
-          messageButton={
-            publicacao?.idUsuarioReporte.includes(Number(idUsuario))
-              ? "Desfazer"
-              : "Reportar"
-          }
-          testID="reportModal"
-        />
+      <ModalConfirmation
+        visible={modalVisibleReportar}
+        callbackFn={
+          publicacao?.idUsuarioReporte.includes(Number(idUsuario))
+            ? cancelarReporte
+            : reportarPublicacao
+        }
+        closeModal={() => setModalVisibleReportar(false)}
+        message={
+          publicacao?.idUsuarioReporte.includes(Number(idUsuario))
+            ? "Desfazer reporte?"
+            : "Reportar publicação?"
+        }
+        messageButton={
+          publicacao?.idUsuarioReporte.includes(Number(idUsuario))
+            ? "Desfazer"
+            : "Reportar"
+        }
+        testID="reportModal"
+      />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   actions: {

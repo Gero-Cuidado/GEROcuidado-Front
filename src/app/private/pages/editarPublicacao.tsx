@@ -2,85 +2,32 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   View,
-  StyleSheet,
   ScrollView,
   Text,
   TextInput,
   Pressable,
   Platform,
+  StyleSheet
 } from "react-native";
 import { SelectList } from "react-native-dropdown-select-list";
 import CustomButton from "../../components/CustomButton";
 import ErrorMessage from "../../components/ErrorMessage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import {
-  ECategoriaPublicacao,
-  IPublicacao,
-} from "../../interfaces/forum.interface";
-import { IUser } from "../../interfaces/user.interface";
-import Toast from "react-native-toast-message";
-import { updatePublicacao } from "../../services/forum.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-interface IErrors {
-  titulo?: string;
-  descricao?: string;
-  categoria?: string;
-}
+import Toast from "react-native-toast-message";
 
 export default function EditarPublicacao() {
-  const item = useLocalSearchParams() as unknown as IPublicacao & IUser;
+  const item = useLocalSearchParams();
 
-  const [titulo, setTitulo] = useState(item.titulo);
-  const [descricao, setDescricao] = useState(item.descricao);
-  const [categoria, setCategoria] = useState(item.categoria);
-  const [erros, setErros] = useState<IErrors>({});
+  const [titulo, setTitulo] = useState(item?.titulo || "");
+  const [descricao, setDescricao] = useState(item?.descricao || "");
+  const [categoria, setCategoria] = useState(item?.categoria || "");
+  const [erros, setErros] = useState({});
   const [showErrors, setShowErrors] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
-  const [token, setToken] = useState("");
-
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
-  };
-
-  const salvar = async () => {
-    if (Object.keys(erros).length > 0) {
-      setShowErrors(true);
-      return;
-    }
-
-    const body: Partial<IPublicacao> = {
-      titulo,
-      descricao,
-      categoria: categoria as ECategoriaPublicacao,
-    };
-
-    try {
-      setShowLoading(true);
-      const response = await updatePublicacao(item.id, body, token);
-
-      Toast.show({
-        type: "success",
-        text1: "Sucesso!",
-        text2: response.message as string,
-      });
-      router.push("/private/tabs/forum");
-    } catch (err) {
-      const error = err as { message: string };
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: error.message,
-      });
-    } finally {
-      setShowLoading(false);
-    }
-  };
 
   const handleErrors = () => {
-    const erros: IErrors = {};
+    const erros = {};
 
     if (!titulo) {
       erros.titulo = "Campo obrigatório!";
@@ -101,18 +48,45 @@ export default function EditarPublicacao() {
     setErros(erros);
   };
 
-  const data = [
-    { key: ECategoriaPublicacao.GERAL, value: ECategoriaPublicacao.GERAL },
-    { key: ECategoriaPublicacao.SAUDE, value: ECategoriaPublicacao.SAUDE },
-    {
-      key: ECategoriaPublicacao.ALIMENTACAO,
-      value: ECategoriaPublicacao.ALIMENTACAO,
-    },
-    {
-      key: ECategoriaPublicacao.EXERCICIOS,
-      value: ECategoriaPublicacao.EXERCICIOS,
-    },
-  ];
+  const salvar = async () => {
+    if (Object.keys(erros).length > 0) {
+      setShowErrors(true);
+      return;
+    }
+
+    const body = {
+      titulo,
+      descricao,
+      categoria,
+    };
+
+    try {
+      setShowLoading(true);
+      // Simulando o comportamento do back-end com AsyncStorage
+      const publicacoes = await AsyncStorage.getItem("publicacoes");
+      const parsedPublicacoes = publicacoes ? JSON.parse(publicacoes) : [];
+      const updatedPublicacoes = parsedPublicacoes.map((pub) =>
+        pub.id === item.id ? { ...pub, ...body } : pub
+      );
+
+      await AsyncStorage.setItem("publicacoes", JSON.stringify(updatedPublicacoes));
+
+      Toast.show({
+        type: "success",
+        text1: "Sucesso!",
+        text2: "Publicação atualizada com sucesso.",
+      });
+      router.push("/private/tabs/forum");
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Erro!",
+        text2: "Erro ao salvar a publicação.",
+      });
+    } finally {
+      setShowLoading(false);
+    }
+  };
 
   const goBack = () => {
     router.push({
@@ -121,8 +95,16 @@ export default function EditarPublicacao() {
     });
   };
 
-  useEffect(() => handleErrors, [titulo, descricao, categoria]);
-  useEffect(() => getToken());
+  useEffect(() => {
+    handleErrors();
+  }, [titulo, descricao, categoria]);
+
+  const data = [
+    { key: "GERAL", value: "Geral" },
+    { key: "SAUDE", value: "Saúde" },
+    { key: "ALIMENTACAO", value: "Alimentação" },
+    { key: "EXERCICIOS", value: "Exercícios" },
+  ];
 
   return (
     <View>
@@ -193,6 +175,7 @@ export default function EditarPublicacao() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

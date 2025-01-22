@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Pressable } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -14,10 +14,14 @@ export default function UploadImageV2({
   setPhotoCallback,
   base64,
 }: Readonly<Props>) {
-  if (base64) {
-    base64 = getImageUri(base64);
-  }
   const [photo, setPhoto] = useState<string | undefined>(base64);
+
+  useEffect(() => {
+    if (base64) {
+      const uri = getImageUri(base64);
+      setPhoto(uri);
+    }
+  }, [base64]); // Atualize o estado se base64 mudar
 
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -42,7 +46,7 @@ export default function UploadImageV2({
     >
       <Icon style={styles.icone} name="image-outline" size={20} />
       <Image
-        source={{ uri: photo }}
+        source={{ uri: photo || noImage }} // Usar uma URL padrão se `photo` for inválido
         style={styles.imagem}
         placeholder={{ uri: noImage }}
         transition={500}
@@ -52,38 +56,21 @@ export default function UploadImageV2({
 }
 
 const styles = StyleSheet.create({
-  imagem: {
-    position: "absolute",
-    width: 168,
-    aspectRatio: 1,
-    zIndex: 2,
-    borderRadius: 25,
-  },
   foto: {
-    position: "relative",
-    borderRadius: 25,
+    width: 100,
+    height: 100,
+    justifyContent: "center",
     alignItems: "center",
-    display: "flex",
-    width: 170,
-    height: 170,
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "#b5b5b5",
-    marginBottom: 38,
-  },
-  botao: {
-    width: 167,
-    height: 174,
-    backgroundColor: "transparent",
-    zIndex: 3,
+    backgroundColor: "#EEE",
+    borderRadius: 50,
   },
   icone: {
     position: "absolute",
-    right: "44%",
-    bottom: "44%",
-    opacity: 0.4,
-    margin: "auto",
-    alignSelf: "center",
-    zIndex: 1,
+    zIndex: 2,
+  },
+  imagem: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 50,
   },
 });

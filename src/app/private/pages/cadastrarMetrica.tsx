@@ -9,118 +9,54 @@ import {
   Pressable,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { IUser } from "../../interfaces/user.interface";
-import { IIdoso } from "../../interfaces/idoso.interface";
-import { router } from "expo-router";
-import { postMetrica } from "../../services/metrica.service";
-import { EMetricas, IMetrica } from "../../interfaces/metricas.interface";
-import Toast from "react-native-toast-message";
-import { hasFoto} from "../../shared/helpers/foto.helper";
-import { getFoto } from "../../shared/helpers/photo.helper";
 
-export default function criarMetrica() {
-  const [user, setUser] = useState<IUser | undefined>(undefined);
-  const [idoso, setIdoso] = useState<IIdoso | undefined>(undefined); 
-  const [token, setToken] = useState<string>("");
-  const [showLoading, setShowLoading] = useState(false);
 
-  // Função assíncrona para carregar o token do AsyncStorage
-  const getToken = async () => {
-    try {
-      const response = await AsyncStorage.getItem("token");
-      if (response) setToken(response as string);
-    } catch (error) {
-      console.error("Erro ao carregar o token:", error);
-    }
-  };
+export default function CriarMetrica() {
+  const [idoso, setIdoso] = useState(null);
+  const [user, setUser] = useState(null);
 
-  // Função assíncrona para carregar o usuário do AsyncStorage
-  const handleUser = async () => {
-    try {
-      const response = await AsyncStorage.getItem("usuario");
-      if (response) {
-        const usuario = JSON.parse(response as string);
-        setUser(usuario);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const usuario = await AsyncStorage.getItem("usuario");
+        const idosoInfo = await AsyncStorage.getItem("idoso");
+        setUser(usuario ? JSON.parse(usuario) : null);
+        setIdoso(idosoInfo ? JSON.parse(idosoInfo) : null);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
       }
-    } catch (error) {
-      console.error("Erro ao carregar o usuário:", error);
-    }
-  };
+    };
 
-  // Função assíncrona para carregar o idoso do AsyncStorage
-  const getIdoso = async () => {
-    try {
-      const idosoString = await AsyncStorage.getItem("idoso");
-      if (idosoString) {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
-        setIdoso(idosoPayload);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar o idoso:", error);
-    }
-  };
+    loadData();
+  }, []);
 
-  // Função para lidar com a seleção da métrica
-  const handleMetricSelection = async (metricType: EMetricas) => {
-    // Verificando se o idoso está carregado antes de prosseguir
+  const handleMetricSelection = async (metricType) => {
     if (!idoso) {
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: "Idoso não encontrado. Por favor, tente novamente mais tarde.",
-      });
-      return; // Se o idoso não estiver disponível, retornamos e não continuamos a execução
+      alert("Idoso não encontrado. Por favor, tente novamente mais tarde.");
+      return;
     }
 
-    const body = {
-      idIdoso: Number(idoso.id), // Garante que o idoso existe
+    const metric = {
+      idIdoso: idoso.id,
       categoria: metricType,
     };
 
     try {
-      setShowLoading(true);
-      const response = await postMetrica(body, token);
-      Toast.show({
-        type: "success",
-        text1: "Sucesso!",
-        text2: response.message as string,
-      });
-
-      // Redirecionando para a tela de registros após o sucesso
-      router.replace({
-        pathname: "private/tabs/registros",
-      });
-    } catch (err) {
-      const error = err as { message: string };
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: error.message,
-      });
-    } finally {
-      setShowLoading(false);
+      const metrics = await AsyncStorage.getItem("metricas");
+      const metricas = metrics ? JSON.parse(metrics) : [];
+      metricas.push(metric);
+      await AsyncStorage.setItem("metricas", JSON.stringify(metricas));
+      alert("Métrica cadastrada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar a métrica:", error);
     }
   };
 
-  // Função para retornar à tela anterior
-  const back = () => {
-    router.push({
-      pathname: "private/tabs/registros",
-    });
-  };
-
-  // Função para renderizar o cartão da métrica
-  const renderMetricCard = (
-    metricType: EMetricas,
-    iconName: string,
-    description: string,
-    iconColor: string,
-  ) => (
+  const renderMetricCard = (metricType, iconName, description, iconColor) => (
     <Pressable
       key={metricType}
       style={styles.metricCard}
       onPress={() => handleMetricSelection(metricType)}
-      testID={`${metricType}-card`}
     >
       <View style={styles.metricCardContent}>
         {iconName === "oxygen" && <Text style={styles.oxygenSymbol}>O2</Text>}
@@ -143,100 +79,42 @@ export default function criarMetrica() {
     </Pressable>
   );
 
-  // Carregamento de dados ao iniciar - Agora usando Promise.all para otimizar
-  useEffect(() => {
-    // Usando Promise.all para carregar todos os dados simultaneamente
-    Promise.all([getToken(), handleUser(), getIdoso()])
-      .catch((err) => console.error("Erro ao carregar dados iniciais:", err));
-  }, []); // Esse efeito será executado uma vez, ao montar o componente.
-
+  const metricData = [
+    { type: "FREQ_CARDIACA", icon: "heartbeat", desc: "Frequência Cardíaca", color: "#FF7D7D" },
+    { type: "PRESSAO_SANGUINEA", icon: "tint", desc: "Pressão Sanguínea", color: "#FF7D7D" },
+    { type: "SATURACAO_OXIGENIO", icon: "oxygen", desc: "Saturação do Oxigênio", color: "#87F4E4" },
+    { type: "TEMPERATURA", icon: "thermometer", desc: "Temperatura", color: "#FFAC7D" },
+    { type: "GLICEMIA", icon: "cubes", desc: "Glicemia", color: "#3F3F3F" },
+    { type: "ALTURA", icon: "user", desc: "Altura (m)", color: "#3F3F3F" },
+    { type: "PESO", icon: "balance-scale", desc: "Peso (kg)", color: "#000000" },
+    { type: "HORAS_DORMIDAS", icon: "bed", desc: "Horas Dormidas", color: "#3F3F3F" },
+    { type: "HIDRATACAO", icon: "cup-water", desc: "Hidratação", color: "#1075c8" },
+  ];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <Pressable style={styles.botaoCriarMetricas} onPress={() => back()}>
-          <Icon
-            name="chevron-left"
-            color={"black"}
-            size={20}
-            style={styles.chevronLeft}
-          />
+        <Pressable style={styles.botaoCriarMetricas} onPress={() => alert("Voltar")}>
+          <Icon name="chevron-left" color={"black"} size={20} style={styles.chevronLeft} />
         </Pressable>
         <View style={styles.photoAndName}>
-          {user?.id && idoso?.id && (
-            <View style={styles.photoAndName}>
-              {getFoto(idoso?.foto)}
+          {idoso && (
+            <>
               <Text style={styles.nomeUsuario}>
-                <Text style={styles.negrito}>{idoso?.nome}</Text>
+                <Text style={styles.negrito}>{idoso.nome}</Text>
               </Text>
-            </View>
+            </>
           )}
         </View>
-        <View style={styles.none}></View>
       </View>
       <Text style={styles.textoAbaixoDoBotao}>
         <Text style={styles.text}>Selecione a métrica a ser cadastrada</Text>
       </Text>
-
       <View style={styles.metricCardsContainer}>
-        {renderMetricCard(
-          EMetricas.FREQ_CARDIACA,
-          "heartbeat",
-          "Frequência Cardíaca",
-          "#FF7D7D",
-        )}
-        {renderMetricCard(
-          EMetricas.PRESSAO_SANGUINEA,
-          "tint",
-          "Pressão Sanguínea",
-          "#FF7D7D",
-        )}
-        {renderMetricCard(
-          EMetricas.SATURACAO_OXIGENIO,
-          "oxygen",
-          "Saturação do Oxigênio",
-          "87F4E4",
-        )}
-        {renderMetricCard(
-          EMetricas.TEMPERATURA,
-          "thermometer",
-          "Temperatura",
-          "FFAC7D",
-        )}
-        {renderMetricCard(EMetricas.GLICEMIA, "cubes", "Glicemia", "#3F3F3F")}
-
-        {renderMetricCard(
-          //Apenas para o caso de serem necessários nesta tela (se não forem, podem excluir)
-          EMetricas.ALTURA,
-          "user",
-          "Altura (m)",
-          "#3F3F3F",
-        )}
-
-        {renderMetricCard(
-          //Apenas para o caso de serem necessários nesta tela (se não forem, podem excluir)
-          EMetricas.PESO,
-          "balance-scale",
-          "Peso (kg)",
-          "#000000",
-        )}
-
-        {renderMetricCard(
-          EMetricas.HORAS_DORMIDAS,
-          "bed",
-          "Horas Dormidas",
-          "#3F3F3F",
-        )}
-
-        {renderMetricCard(
-          EMetricas.HIDRATACAO,
-          "cup-water",
-          "Hidratação",
-          "#1075c8",
+        {metricData.map((metric) =>
+          renderMetricCard(metric.type, metric.icon, metric.desc, metric.color)
         )}
       </View>
-
-      {/* Adicione aqui o restante do conteúdo do componente criarMetrica */}
     </ScrollView>
   );
 }

@@ -2,163 +2,109 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
-import {
-  EMetricas,
-  IMetrica,
-  IValorMetricaCategoria,
-} from "../interfaces/metricas.interface";
 import { Entypo, Octicons } from "@expo/vector-icons";
-import { deleteMetricaValue } from "../services/metricaValue.service";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import Toast from "react-native-toast-message";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ModalConfirmation from "./ModalConfirmation";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import database from "../db";
-import { Collection } from "@nozbe/watermelondb";
-import ValorMetrica from "../model/ValorMetrica";
 
 interface IProps {
-  item: IValorMetricaCategoria;
-  metrica: IMetrica;
+  item: {
+    id: string;
+    categoria: string;
+    valor: number;
+    dataHora: string;
+  };
+  metrica: {
+    id: string;
+    titulo: string;
+    descricao: string;
+  };
 }
 
 export default function CardValorMetrica({ item, metrica }: IProps) {
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
-  const [token, setToken] = useState<string>("");
   const [modalVisible, setModalVisible] = useState(false);
 
   const titleColor = "#000";
   const textColor = "#888";
 
-  const getToken = () => {
-    AsyncStorage.getItem("token").then((response) => {
-      setToken(response as string);
-    });
-  };
-
   const unidade = () => {
-    if (item.categoria == EMetricas.FREQ_CARDIACA) {
-      return "bpm";
-    }
-    if (item.categoria == EMetricas.GLICEMIA) {
-      return "mg/dL";
-    }
-    if (item.categoria == EMetricas.PESO) {
-      return "kg";
-    }
-    if (item.categoria == EMetricas.PRESSAO_SANGUINEA) {
-      return "mmHg";
-    }
-    if (item.categoria == EMetricas.SATURACAO_OXIGENIO) {
-      return "%";
-    }
-    if (item.categoria == EMetricas.TEMPERATURA) {
-      return "°C";
-    }
-    if (item.categoria == EMetricas.ALTURA) {
-      return "cm";
-    }
-    if (item.categoria == EMetricas.HORAS_DORMIDAS) {
-      return "h";
-    }
-    if (item.categoria == EMetricas.IMC) {
-      return "kg/m²";
-    }
-    if (item.categoria == EMetricas.HIDRATACAO) {
-      return "ml";
-    }
+    const unitsMap: { [key: string]: string } = {
+      FREQ_CARDIACA: "bpm",
+      GLICEMIA: "mg/dL",
+      PESO: "kg",
+      PRESSAO_SANGUINEA: "mmHg",
+      SATURACAO_OXIGENIO: "%",
+      TEMPERATURA: "°C",
+      ALTURA: "cm",
+      HORAS_DORMIDAS: "h",
+      IMC: "kg/m²",
+      HIDRATACAO: "ml",
+    };
+    return unitsMap[item.categoria] || "";
   };
 
   const separaDataHora = () => {
     const dataHoraNum = new Date(item.dataHora).getTime();
     const fuso = new Date(item.dataHora).getTimezoneOffset() * 60000;
     const value = new Date(dataHoraNum - fuso).toISOString();
-    const valueFinal = value.split("T");
-    const separaData = valueFinal[0].split("-");
-    setData(`${separaData[2]}/${separaData[1]}/${separaData[0]}`);
-    const separaHora = valueFinal[1].split(":");
-    setHora(`${separaHora[0]}:${separaHora[1]}`);
+    const [date, time] = value.split("T");
+    const [year, month, day] = date.split("-");
+    setData(`${day}/${month}/${year}`);
+    setHora(time.split(":").slice(0, 2).join(":"));
   };
 
   const icone = () => {
-    if (item.categoria == EMetricas.FREQ_CARDIACA) {
-      return <FontAwesome name="heartbeat" color={"#FF7D7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.GLICEMIA) {
-      return <FontAwesome name="cubes" color={"#3F3F3F"} size={25} />;
-    }
-    if (item.categoria == EMetricas.PESO) {
-      return <Icon name="scale-bathroom" color={"#B4026D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.PRESSAO_SANGUINEA) {
-      return <FontAwesome name="tint" color={"#FF7D7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.SATURACAO_OXIGENIO) {
-      return (
-        <View>
-          <Text>
-            O<Text style={{ fontSize: 10 }}>2</Text>
-          </Text>
-        </View>
-      );
-    }
-    if (item.categoria == EMetricas.TEMPERATURA) {
-      return <FontAwesome name="thermometer" color={"#FFAC7D"} size={25} />;
-    }
-    if (item.categoria == EMetricas.HORAS_DORMIDAS) {
-      return <FontAwesome name="bed" color={"#4B0082"} size={25} />;
-    }
-    if (item.categoria == EMetricas.ALTURA) {
-      return (
-        <Entypo
-          name="ruler"
-          color={"#000"}
-          size={25}
-          style={{ opacity: 0.8 }}
-        />
-      );
-    }
-    if (item.categoria == EMetricas.IMC) {
-      return <Entypo name="calculator" color={"#000"} size={25} />;
-    }
-    if (item.categoria == EMetricas.HIDRATACAO) {
-      return (
-        <MaterialCommunityIcons name="cup-water" color={"#1075c8"} size={25} />
-      );
-    }
+    const iconMap: { [key: string]: JSX.Element } = {
+      FREQ_CARDIACA: <FontAwesome name="heartbeat" color="#FF7D7D" size={25} />,
+      GLICEMIA: <FontAwesome name="cubes" color="#3F3F3F" size={25} />,
+      PESO: <Icon name="scale-bathroom" color="#B4026D" size={25} />,
+      PRESSAO_SANGUINEA: <FontAwesome name="tint" color="#FF7D7D" size={25} />,
+      SATURACAO_OXIGENIO: (
+        <Text>
+          O<Text style={{ fontSize: 10 }}>2</Text>
+        </Text>
+      ),
+      TEMPERATURA: <FontAwesome name="thermometer" color="#FFAC7D" size={25} />,
+      HORAS_DORMIDAS: <FontAwesome name="bed" color="#4B0082" size={25} />,
+      ALTURA: <Entypo name="ruler" color="#000" size={25} style={{ opacity: 0.8 }} />,
+      IMC: <Entypo name="calculator" color="#000" size={25} />,
+      HIDRATACAO: <MaterialCommunityIcons name="cup-water" color="#1075c8" size={25} />,
+    };
+    return iconMap[item.categoria] || null;
   };
 
   const apagarValor = async () => {
     try {
       setModalVisible(false);
 
-      const valorMetricasCollection = database.get('valor_metrica') as Collection<ValorMetrica>;
-      await database.write(async () => {
-        const valorMetrica = await valorMetricasCollection.find(String(item.id));
-        await valorMetrica.destroyPermanently(); // Change it to mark as deleted when implementing sync
-      });
+      // Recupera os registros do AsyncStorage
+      const storedData = await AsyncStorage.getItem("valoresMetrica");
+      const valores = storedData ? JSON.parse(storedData) : [];
 
+      // Filtra o valor que será excluído
+      const updatedValores = valores.filter((valor: any) => valor.id !== item.id);
+
+      // Salva novamente no AsyncStorage
+      await AsyncStorage.setItem("valoresMetrica", JSON.stringify(updatedValores));
+
+      // Navega para a página de detalhes da métrica
       router.replace({
         pathname: "/private/pages/visualizarMetrica",
         params: metrica,
       });
-    } catch (err) {
-      console.log("Erro ao apagar valor de metrica:", err);
+    } catch (error) {
+      console.error("Erro ao apagar valor de métrica:", error);
     }
   };
 
-  const confirmation = () => {
-    setModalVisible(!modalVisible);
-  };
+  const confirmation = () => setModalVisible(!modalVisible);
 
-  const closeModal = () => {
-    setModalVisible(false);
-  };
+  const closeModal = () => setModalVisible(false);
 
   useEffect(() => separaDataHora(), []);
-  useEffect(() => getToken(), []);
 
   return (
     <View style={styles.container}>
@@ -167,22 +113,20 @@ export default function CardValorMetrica({ item, metrica }: IProps) {
       >
         <View
           style={
-            item.categoria == EMetricas.SATURACAO_OXIGENIO
+            item.categoria === "SATURACAO_OXIGENIO"
               ? styles.oxygenIcon
               : styles.othersIcons
           }
         >
           {icone()}
-          <Text style={[styles.title, { color: titleColor }]}>
-            {item.valor}
-          </Text>
+          <Text style={[styles.title, { color: titleColor }]}>{item.valor}</Text>
           <Text style={[styles.units, { color: textColor }]}>{unidade()}</Text>
         </View>
         <Octicons
           name="x-circle-fill"
           style={styles.apagar}
           size={22}
-          color={"#FF7F7F"}
+          color="#FF7F7F"
           onPress={confirmation}
         />
         <ModalConfirmation

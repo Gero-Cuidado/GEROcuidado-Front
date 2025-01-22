@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Modal, StyleSheet, Text, Pressable, View } from "react-native";
-import { EMetricas, IMetrica } from "../interfaces/metricas.interface";
+import { Modal, Text, Pressable, View, TextInput } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { TextInput } from "react-native-gesture-handler";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ErrorMessage from "./ErrorMessage";
-import { validateValue } from "../shared/helpers/modal.helper";
 import ModalButtons from "./ModalButtons";
 import styles from "./style/stylesModal";
+
 interface IProps {
   visible: boolean;
-  callbackFn: (valor: string) => unknown;
-  closeModal: () => unknown;
+  callbackFn: (valor: string) => void;
+  closeModal: () => void;
   message: string;
-  metrica: IMetrica;
+  metrica: {
+    categoria: string;
+    id: string;
+    titulo: string;
+    descricao: string;
+  };
 }
 
 interface IErrors {
@@ -25,13 +29,49 @@ export default function ModalMeta({
   closeModal,
   metrica,
   message,
-}: Readonly<IProps>) {
+}: IProps) {
   const [valor, setValor] = useState<string>("");
   const [erros, setErros] = useState<IErrors>({});
   const [showErrors, setShowErrors] = useState(false);
 
+  // Validação local do valor
+  const validateValue = (valor: string) => {
+    let error = "";
+    if (!valor) {
+      error = "O valor não pode ser vazio.";
+    } else if (isNaN(Number(valor))) {
+      error = "O valor deve ser numérico.";
+    }
+    setErros({ valor: error });
+    setShowErrors(!!error);
+  };
+
+  const handleSave = async () => {
+    if (showErrors) return;
+
+    try {
+      // Salva a nova meta no AsyncStorage
+      const storedMetas = await AsyncStorage.getItem("metas");
+      const metas = storedMetas ? JSON.parse(storedMetas) : [];
+
+      const novaMeta = {
+        id: Date.now().toString(),
+        categoria: metrica.categoria,
+        valor: valor,
+      };
+
+      metas.push(novaMeta);
+      await AsyncStorage.setItem("metas", JSON.stringify(metas));
+
+      callbackFn(valor);
+      closeModal();
+    } catch (error) {
+      console.error("Erro ao salvar meta:", error);
+    }
+  };
+
   useEffect(() => {
-    validateValue(valor, setShowErrors, setErros);
+    validateValue(valor);
   }, [valor]);
 
   return (
@@ -40,10 +80,10 @@ export default function ModalMeta({
         <View style={styles.modalView}>
           <Text style={styles.modalText}>Adicionar uma nova meta</Text>
           <View style={styles.modal}>
-            {metrica.categoria == EMetricas.HIDRATACAO && (
+            {metrica.categoria === "HIDRATACAO" && (
               <MaterialCommunityIcons
                 name="cup-water"
-                color={"#1075c8"}
+                color="#1075c8"
                 size={60}
               />
             )}
@@ -52,8 +92,8 @@ export default function ModalMeta({
                 value={valor}
                 onChangeText={setValor}
                 style={styles.textInput}
-                placeholderTextColor={"#3D3D3D"}
-                testID="modal-input"
+                placeholder="Digite o valor da meta"
+                placeholderTextColor="#3D3D3D"
               />
               <View style={styles.erroValor}>
                 <ErrorMessage show={showErrors} text={erros.valor} />
@@ -61,11 +101,11 @@ export default function ModalMeta({
             </View>
           </View>
           <ModalButtons
-          onCancel={closeModal}
-          onSave={() => callbackFn(valor)}
-          showErrors={showErrors}
-          setShowErrors={setShowErrors}
-          erros={erros}
+            onCancel={closeModal}
+            onSave={handleSave}
+            showErrors={showErrors}
+            setShowErrors={setShowErrors}
+            erros={erros}
           />
         </View>
       </View>

@@ -1,45 +1,47 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   View,
   TextInput,
   ActivityIndicator,
+  StyleSheet
 } from "react-native";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import ErrorMessage from "../../components/ErrorMessage";
 import CustomButton from "../../components/CustomButton";
 import UploadImage from "../../components/UploadImage";
 import ModalConfirmation from "../../components/ModalConfirmation";
 import BackButton from "../../components/BackButton";
-import database from "../../db";
-import User from "../../model/Usuario";
-import { Q } from "@nozbe/watermelondb";
-import { IUser } from "../../interfaces/user.interface";
-import Usuario from "../../model/Usuario";
-
-interface IErrors {
-  nome?: string;
-}
 
 export default function EditarPerfil() {
-  const user = useLocalSearchParams() as unknown as IUser;
-  const [foto, setFoto] = useState<string | undefined | null>(user.foto);
-  const [nome, setNome] = useState(user.nome);
-  const [erros, setErros] = useState<IErrors>({});
+  const [user, setUser] = useState<any | null>(null);
+  const [foto, setFoto] = useState<string | undefined | null>("");
+  const [nome, setNome] = useState("");
+  const [erros, setErros] = useState<any>({});
   const [showErrors, setShowErrors] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [showLoadingApagar, setShowLoadingApagar] = useState(false);
 
   useEffect(() => {
-    console.log("user:", user);
-    console.log("foto inicial:", foto);
-    console.log("nome inicial:", nome);
+    const loadUser = async () => {
+      try {
+        const userJson = await AsyncStorage.getItem("usuario");
+        if (userJson) {
+          const userData = JSON.parse(userJson);
+          setUser(userData);
+          setNome(userData.nome);
+          setFoto(userData.foto);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usuário:", error);
+      }
+    };
+    loadUser();
   }, []);
 
   const salvar = async () => {
@@ -59,40 +61,9 @@ export default function EditarPerfil() {
     try {
       setShowLoading(true);
 
-      const usersCollection = database.get<Usuario>("usuario");
-      console.log("Coleção de usuários obtida:", usersCollection);
+      const updatedUser = { ...user, nome, foto };
 
-      await database.write(async () => {
-        const userToUpdate = await usersCollection
-          .query(Q.where("id", user.id.toString()))
-          .fetch();
-
-        console.log("Usuário encontrado para atualizar:", userToUpdate);
-
-        if (userToUpdate.length > 0) {
-          console.log("Estado antes da atualização:", userToUpdate[0]);
-
-          await userToUpdate[0].update((user) => {
-            user.nome = nome;
-            if (foto) user.foto = foto;
-          });
-
-          const updatedUsers = await usersCollection
-            .query(Q.where("id", user.id.toString()))
-            .fetch();
-          console.log("Usuário atualizado no banco de dados:", updatedUsers);
-
-          const updatedUser = {
-            ...user,
-            nome,
-            foto,
-          };
-
-          console.log("Usuário atualizado:", updatedUser);
-
-          await AsyncStorage.setItem("usuario", JSON.stringify(updatedUser));
-        }
-      });
+      await AsyncStorage.setItem("usuario", JSON.stringify(updatedUser));
 
       Toast.show({
         type: "success",
@@ -124,24 +95,7 @@ export default function EditarPerfil() {
     try {
       setShowLoadingApagar(true);
 
-      const usersCollection = database.get<Usuario>("usuario");
-      console.log("Coleção de usuários obtida para deletar:", usersCollection);
-
-      await database.write(async () => {
-        const userToDelete = await usersCollection
-          .query(Q.where("id", user.id.toString()))
-          .fetch();
-
-        console.log("Usuário encontrado para deletar:", userToDelete);
-
-        if (userToDelete.length > 0) {
-          await userToDelete[0].destroyPermanently();
-          console.log("Usuário deletado com sucesso:", userToDelete[0]);
-        }
-      });
-
       await AsyncStorage.removeItem("usuario");
-      console.log("Usuário removido do AsyncStorage");
 
       Toast.show({
         type: "success",
@@ -176,7 +130,7 @@ export default function EditarPerfil() {
   useEffect(() => handleErrors(), [nome]);
 
   const handleErrors = () => {
-    const erros: IErrors = {};
+    const erros: any = {};
 
     if (!nome) {
       erros.nome = "Campo obrigatório!";
@@ -213,7 +167,7 @@ export default function EditarPerfil() {
       <View style={(styles.formControl, styles.disabled)}>
         <View style={styles.field}>
           <Icon style={styles.iconInput} name="email-outline" size={20} />
-          <Text style={styles.textInput}>{user.email}</Text>
+          <Text style={styles.textInput}>{user?.email}</Text>
         </View>
       </View>
 

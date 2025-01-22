@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, Pressable, View } from "react-native";
-import { EMetricas, IMetrica } from "../interfaces/metricas.interface";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FontAwesome, Entypo } from "@expo/vector-icons";
@@ -9,6 +8,29 @@ import ErrorMessage from "./ErrorMessage";
 import { validateValue } from "../shared/helpers/modal.helper";
 import ModalButtons from "./ModalButtons";
 import styles from "./style/stylesModal";
+
+export interface IMetricaBody {
+  idIdoso: number;
+  categoria: EMetricas;
+  valorMaximo?: string;
+}
+
+export interface IMetrica extends IMetricaBody {
+  id: number;
+}
+
+export enum EMetricas {
+  FREQ_CARDIACA = "Frequência Cardíaca",
+  TEMPERATURA = "Temperatura",
+  PRESSAO_SANGUINEA = "Pressão",
+  PESO = "Peso",
+  GLICEMIA = "Glicemia",
+  SATURACAO_OXIGENIO = "Saturação",
+  ALTURA = "Altura",
+  HORAS_DORMIDAS = "Horas Dormidas",
+  IMC = "IMC",
+  HIDRATACAO = "Hidratação",
+}
 
 interface IProps {
   visible: boolean;

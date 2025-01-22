@@ -4,10 +4,7 @@ import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { SelectList } from "react-native-dropdown-select-list";
 import { ScrollView } from "react-native";
-import { ECategoriaPublicacao } from "../../interfaces/forum.interface";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
-import { postPublicacao } from "../../services/forum.service";
 import Toast from "react-native-toast-message";
 import CustomButton from "../../components/CustomButton";
 import ErrorMessage from "../../components/ErrorMessage";
@@ -19,11 +16,10 @@ interface IErrors {
 }
 
 export default function CriaPublicacao() {
-  const [idUsuario, setIdUsuario] = useState<number>(0);  // Inicializa com um valor numérico
-  const [token, setToken] = useState<string>("");
+  const [idUsuario, setIdUsuario] = useState<number>(0);
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [categoria, setCategoria] = useState<ECategoriaPublicacao | null>(null);
+  const [categoria, setCategoria] = useState<string | null>(null);
   const [erros, setErros] = useState<IErrors>({});
   const [showErrors, setShowErrors] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,9 +27,9 @@ export default function CriaPublicacao() {
   const getIdUsuario = async () => {
     const usuarioData = await AsyncStorage.getItem("usuario");
     if (usuarioData) {
-      const usuario = JSON.parse(usuarioData) as IUser;
+      const usuario = JSON.parse(usuarioData);
       if (usuario?.id) {
-        setIdUsuario(Number(usuario.id)); // Converta para número explicitamente
+        setIdUsuario(Number(usuario.id));
       } else {
         Toast.show({
           type: "error",
@@ -48,65 +44,48 @@ export default function CriaPublicacao() {
         text2: "Usuário não encontrado no armazenamento.",
       });
     }
-  
-    const tokenData = await AsyncStorage.getItem("token");
-    if (tokenData) {
-      setToken(tokenData);
-    } else {
-      Toast.show({
-        type: "error",
-        text1: "Erro!",
-        text2: "Token não encontrado no armazenamento.",
-      });
-    }
   };
-  
-  
-  
 
   const data = [
-    { key: ECategoriaPublicacao.GERAL, value: ECategoriaPublicacao.GERAL },
-    { key: ECategoriaPublicacao.SAUDE, value: ECategoriaPublicacao.SAUDE },
-    {
-      key: ECategoriaPublicacao.ALIMENTACAO,
-      value: ECategoriaPublicacao.ALIMENTACAO,
-    },
-    {
-      key: ECategoriaPublicacao.EXERCICIOS,
-      value: ECategoriaPublicacao.EXERCICIOS,
-    },
+    { key: "GERAL", value: "GERAL" },
+    { key: "SAUDE", value: "SAUDE" },
+    { key: "ALIMENTACAO", value: "ALIMENTACAO" },
+    { key: "EXERCICIOS", value: "EXERCICIOS" },
   ];
 
   const publicar = async () => {
     try {
       handleErrors();
-  
+
       if (Object.keys(erros).length > 0) {
         setShowErrors(true);
         return;
       }
-  
+
       if (!idUsuario) {
         throw new Error("ID do usuário não está definido.");
       }
-  
+
       const body = {
         idUsuario,
         titulo,
         descricao,
         dataHora: new Date(),
-        categoria: categoria as ECategoriaPublicacao,
+        categoria: categoria as string,
       };
-  
+
       setLoading(true);
-      const response = await postPublicacao(body, token);
-  
-      Toast.show({
-        type: "success",
-        text1: "Sucesso!",
-        text2: response.message as string,
-      });
-      router.push("/private/tabs/forum");
+
+      // Simulação de publicação com sucesso
+      setTimeout(() => {
+        Toast.show({
+          type: "success",
+          text1: "Sucesso!",
+          text2: "Publicação realizada com sucesso!",
+        });
+        router.push("/private/tabs/forum");
+      }, 1000); // Simula um delay de publicação
+
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : "Erro desconhecido.";
       Toast.show({
@@ -118,10 +97,6 @@ export default function CriaPublicacao() {
       setLoading(false);
     }
   };
-  
-  
-  
-  
 
   useEffect(() => handleErrors(), [titulo, descricao, categoria]);
   useEffect(() => {
@@ -130,7 +105,6 @@ export default function CriaPublicacao() {
     };
     fetchUserData();
   }, []);
-  
 
   const handleErrors = () => {
     const erros: IErrors = {};
@@ -215,6 +189,7 @@ export default function CriaPublicacao() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {

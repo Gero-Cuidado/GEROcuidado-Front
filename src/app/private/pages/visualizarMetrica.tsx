@@ -1,53 +1,26 @@
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IUser } from "../../interfaces/user.interface";
 import NaoAutenticado from "../../components/NaoAutenticado";
 import { View, StyleSheet, Pressable, Text } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { IIdoso } from "../../interfaces/idoso.interface";
 import { router, useLocalSearchParams } from "expo-router";
-import {
-  EMetricas,
-  IMetrica,
-  IMetricaFilter,
-  IMetricaValueFilter,
-  IOrder,
-  IValorMetrica,
-} from "../../interfaces/metricas.interface";
-import {
-  getAllMetricaValues,
-  postMetricaValue,
-} from "../../services/metricaValue.service";
 import Toast from "react-native-toast-message";
 import { FlatList } from "react-native";
 import ModalMetrica from "../../components/ModalMetrica";
 import ModalMeta from "../../components/ModalMeta";
 import CardValorMetrica from "../../components/CardValorMetrica";
-import {
-  getAllMetrica,
-  getSomaHidratacao,
-  updateMetrica,
-} from "../../services/metrica.service";
-import database from "../../db";
-import { Collection, Q } from "@nozbe/watermelondb";
-import ValorMetrica from "../../model/ValorMetrica";
 
 export default function VisualizarMetrica() {
-  const params = useLocalSearchParams() as unknown as IMetrica;
-  const [user, setUser] = useState<IUser | undefined>(undefined);
+  const params = useLocalSearchParams();
+  const [user, setUser] = useState<any | undefined>(undefined);
   const [token, setToken] = useState<string>("");
-  const [valueMetrica, setValueMetrica] = useState<IValorMetrica[]>([]);
-  const [idoso, setIdoso] = useState<IIdoso>();
+  const [valueMetrica, setValueMetrica] = useState<any[]>([]);
+  const [idoso, setIdoso] = useState<any>();
   const [showLoading, setShowLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMetaVisible, setModalMetaVisible] = useState(false);
   const [meta, SetMeta] = useState(params.valorMaximo);
   const [somaMeta, setSomaMeta] = useState(0);
-
-  const order: IOrder = {
-    column: "dataHora",
-    dir: "DESC",
-  };
 
   const handleUser = () => {
     AsyncStorage.getItem("usuario").then((response) => {
@@ -57,14 +30,13 @@ export default function VisualizarMetrica() {
 
     AsyncStorage.getItem("token").then((response) => {
       setToken(response as string);
-      getHidratacao(response as string);
     });
   };
 
   const getIdoso = () => {
     AsyncStorage.getItem("idoso").then((idosoString) => {
       if (idosoString) {
-        const idosoPayload = JSON.parse(idosoString) as IIdoso;
+        const idosoPayload = JSON.parse(idosoString);
         setIdoso(idosoPayload);
       }
     });
@@ -73,17 +45,8 @@ export default function VisualizarMetrica() {
   const getMetricasValues = async () => {
     try {
       setShowLoading(true);
-
-      console.log(params);
-
-      const valorMetricasCollection = database.get<ValorMetrica>('valor_metrica');
-      const valoresMetrica = await valorMetricasCollection.query(
-        Q.where('metrica_id', params.id),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(100)
-      ).fetch();
-
-      setValueMetrica(valoresMetrica);
+      // Removido código de banco de dados e interação com services/metrica
+      setValueMetrica([{ valor: 80, dataHora: new Date() }, { valor: 90, dataHora: new Date() }]); // Exemplo estático para o front-end
     } catch (err) {
       console.log("Erro ao buscar valores de metrica:", err);
     } finally {
@@ -102,18 +65,9 @@ export default function VisualizarMetrica() {
   const salvar = async (valor: string) => {
     try {
       setShowLoading(true);
-      const valorMetricasCollection = database.get('valor_metrica') as Collection<ValorMetrica>;
-
-      await database.write(async () => {
-        const createdValorMetrica = await valorMetricasCollection.create((valorMetrica) => {
-          valorMetrica.idMetrica = String(params.id);
-          valorMetrica.valor = valor;
-          valorMetrica.dataHora = new Date();
-        });
-      });
+      // Simula a gravação de um novo valor de métrica no front-end
+      setValueMetrica([...valueMetrica, { valor, dataHora: new Date() }]);
       setModalVisible(false);
-      getMetricasValues();
-      getHidratacao(token);
     } catch (err) {
       console.log("Erro ao salvar valor de metrica:", err);
     } finally {
@@ -127,80 +81,23 @@ export default function VisualizarMetrica() {
     });
   };
 
-  const getIMC = async () => {
-    if (params.categoria !== EMetricas.IMC || !idoso) return;
-
-    try {
-      const valorMetricasCollection = database.get('valor_metrica') as Collection<ValorMetrica>;
-      const metricaAltura = await valorMetricasCollection.query(
-        Q.on('metrica', [
-          Q.where('idoso_id', idoso.id),
-          Q.where('categoria', EMetricas.ALTURA),
-        ]),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(1)
-      ).fetch();
-
-      const metricaPeso = await valorMetricasCollection.query(
-        Q.on('metrica', [
-          Q.where('idoso_id', idoso.id),
-          Q.where('categoria', EMetricas.PESO),
-        ]),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(1)
-      ).fetch();
-      const altura = metricaAltura[0]?.valor;
-      const peso = metricaPeso[0]?.valor;
-      
-
-      const alturaMetro = Number(altura) / 100;
-      const alturaMetro2 = alturaMetro != 0.0 ? alturaMetro * alturaMetro : 1.0;
-
-      return (Number(peso) / alturaMetro2).toFixed(2);
-
-    } catch (err) {
-      console.log("Erro ao buscar metricas pro IMC:", err);
-      return 0;
-    }
-  };
-
-  // const getLastValue = async (idMetrica: number) => {
-  //   const filter: IMetricaValueFilter = { idMetrica };
-  //   const response = await getAllMetricaValues(filter, order);
-  //   const newMetricasValues = response.data as IValorMetrica[];
-  //
-  //   const valor = newMetricasValues[0]?.valor;
-  //
-  //   if (!valor) {
-  //     throw new Error("Altura/Peso não cadastrado!");
-  //   }
-  //
-  //   return valor;
-  // };
-
-  const calcular = async () => {
-    try {
-      setShowLoading(true);
-      const IMC = await getIMC();
-      salvar(String(IMC));
-    } finally {
-      setShowLoading(false);
-    }
+  const calcular = () => {
+    // Exemplo de cálculo de IMC estático, sem backend
+    const altura = 170; // Simulado, em cm
+    const peso = 70; // Simulado, em kg
+    const alturaMetro = altura / 100;
+    const imc = (peso / (alturaMetro * alturaMetro)).toFixed(2);
+    salvar(imc);
   };
 
   const adicionarMeta = async (valorMaximo: string) => {
-    const body = {
-      valorMaximo: valorMaximo,
-    };
-
     try {
       setShowLoading(true);
-      const response = await updateMetrica(params.id, body, token);
-      SetMeta(response.data?.valorMaximo);
+      SetMeta(valorMaximo);
       Toast.show({
         type: "success",
         text1: "Sucesso!",
-        text2: response.message as string,
+        text2: "Meta adicionada com sucesso.",
       });
       setModalMetaVisible(false);
       getMetricasValues();
@@ -214,17 +111,6 @@ export default function VisualizarMetrica() {
     } finally {
       setShowLoading(false);
     }
-  };
-
-  const getHidratacao = (token: string) => {
-    return 0; // Forgive me father
-    if (params.categoria !== EMetricas.HIDRATACAO) return;
-
-    getSomaHidratacao(params.id, token)
-      .then((response) => {
-        setSomaMeta(response);
-      })
-      .catch((err) => console.log(err));
   };
 
   useEffect(() => {
@@ -245,9 +131,9 @@ export default function VisualizarMetrica() {
       </View>
 
       <View
-        style={params.categoria == EMetricas.IMC ? styles.botoes : styles.botao}
+        style={params.categoria === "IMC" ? styles.botoes : styles.botao}
       >
-        {params.categoria == EMetricas.IMC && (
+        {params.categoria === "IMC" && (
           <Pressable style={styles.botaoEditarMetricas} onPress={calcular}>
             <Icon name="plus" color={"white"} size={20} />
             <Text style={styles.textoBotaoEditarMetricas}>
@@ -255,7 +141,7 @@ export default function VisualizarMetrica() {
             </Text>
           </Pressable>
         )}
-        {params.categoria == EMetricas.HIDRATACAO && (
+        {params.categoria === "HIDRATACAO" && (
           <Pressable style={styles.botaoAdicionarMeta} onPress={novaMeta}>
             <Text style={styles.textoBotaoAdicionarMeta}>Adicionar meta</Text>
           </Pressable>
@@ -266,7 +152,7 @@ export default function VisualizarMetrica() {
         </Pressable>
       </View>
       <View style={styles.valorMaximoHidratacao}>
-        {params.categoria == EMetricas.HIDRATACAO && (
+        {params.categoria === "HIDRATACAO" && (
           <View>
             <View
               style={[
@@ -289,7 +175,7 @@ export default function VisualizarMetrica() {
         renderItem={({ item }) => (
           <Pressable>
             <CardValorMetrica
-              item={{ ...item._raw, categoria: params.categoria }}
+              item={item}
               metrica={params}
             />
           </Pressable>
